@@ -136,6 +136,16 @@ app.include_router(narratives_router, prefix="/api")
 app.include_router(stories_router, prefix="/api")
 
 
+@app.get("/")
+def root():
+    return {
+        "service": "smartnews-api",
+        "status": "ok",
+        "health": "/health",
+        "docs": "/docs",
+    }
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
