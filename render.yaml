@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: smartnews-api
+    runtime: python
+    plan: free
+    buildCommand: pip install uv && uv sync --project api
+    startCommand: uv run --project api uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DB_PATH
+        value: smartnews.duckdb
+      - key: GITHUB_REPOSITORY
+        value: hacktan/smartnews
+      - key: GITHUB_RELEASE_TAG
+        value: db-latest
+      - key: GITHUB_DB_ASSET_NAME
+        value: smartnews.duckdb
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: CORS_ORIGINS
+        value: "*"

@@ -1,0 +1,150 @@
+name: SmartNews Pipeline
+
+on:
+  schedule:
+    # Run every 6 hours: 00:00, 06:00, 12:00, 18:00 UTC
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      skip_scraping:
+        description: "Skip full-text scraping (faster, no new images)"
+        required: false
+        default: "false"
+      skip_enrichment:
+        description: "Skip AI enrichment (saves OpenAI cost)"
+        required: false
+        default: "false"
+
+concurrency:
+  group: pipeline
+  cancel-in-progress: false  # never cancel a running pipeline mid-run
+
+jobs:
+  pipeline:
+    name: Run SmartNews Pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    env:
+      DB_PATH: smartnews.duckdb
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_MODEL: gpt-4o-mini
+      OPENAI_EMBEDDING_MODEL: text-embedding-3-small
+      ENRICHMENT_BATCH_LIMIT: "50"
+      SCRAPE_BATCH_LIMIT: "100"
+
+    steps:
+      # ── Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Python + uv ───────────────────────────────────────────────────────
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync
+
+      # ── Database download ──────────────────────────────────────────────────
+      - name: Bootstrap db-latest release (first run only)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if ! gh release view db-latest 2>/dev/null; then
+            echo "Creating db-latest release for the first time..."
+            gh release create db-latest \
+              --title "SmartNews Database" \
+              --notes "Auto-managed by pipeline. Do not edit manually." \
+              --prerelease
+            echo "DB_FRESH=true" >> $GITHUB_ENV
+          else
+            echo "db-latest release exists."
+            echo "DB_FRESH=false" >> $GITHUB_ENV
+          fi
+
+      - name: Download existing database
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "$DB_FRESH" = "false" ]; then
+            gh release download db-latest \
+              --pattern "smartnews.duckdb" \
+              --output smartnews.duckdb \
+              --clobber 2>/dev/null \
+              && echo "✓ Existing database downloaded ($(du -sh smartnews.duckdb | cut -f1))" \
+              || echo "⚠ No database asset in release yet — starting fresh"
+          else
+            echo "First run — starting with empty database"
+          fi
+
+      # ── Pipeline steps ─────────────────────────────────────────────────────
+      - name: "01 Bronze — RSS ingestion"
+        run: uv run python pipeline/01_bronze_ingestion.py
+
+      - name: "01b Bronze — Full-text scraping"
+        if: ${{ github.event.inputs.skip_scraping != 'true' }}
+        run: uv run python pipeline/01b_fulltext_scraping.py
+        continue-on-error: true  # scraping failures are non-critical
+
+      - name: "02 Silver — Transformation"
+        run: uv run python pipeline/02_silver_transformation.py
+
+      - name: "03 Gold — Aggregation"
+        run: uv run python pipeline/03_gold_aggregation.py
+
+      - name: "04 AI — Enrichment + embeddings (pass 1)"
+        if: ${{ github.event.inputs.skip_enrichment != 'true' }}
+        run: uv run python pipeline/04_ai_enrichment.py
+        # Pass 1: enriches articles + generates embeddings.
+        # Story compilation is skipped here (no story_matches yet).
+
+      - name: "03b Gold — Cross-source story matching"
+        run: uv run python pipeline/03b_story_matching.py
+        # Requires embeddings from pass 1 above.
+        # If enrichment was skipped, this will match on title+entity only.
+
+      - name: "04 AI — Story compilation (pass 2)"
+        if: ${{ github.event.inputs.skip_enrichment != 'true' }}
+        run: uv run python pipeline/04_ai_enrichment.py
+        # Pass 2: ENRICHMENT_BATCH_LIMIT articles skipped (already enriched).
+        # Only story compilation runs (reads gold.story_matches from 03b).
+
+      - name: "05 Serve — Projection"
+        run: uv run python pipeline/05_serving_projection.py
+
+      # ── Validation ────────────────────────────────────────────────────────
+      - name: Validate pipeline output
+        run: uv run python pipeline/validate.py
+
+      # ── Database upload ────────────────────────────────────────────────────
+      - name: Upload database to GitHub Releases
+        if: success()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DB_SIZE=$(du -sh smartnews.duckdb | cut -f1)
+          echo "Uploading smartnews.duckdb (${DB_SIZE}) to db-latest release..."
+          gh release upload db-latest smartnews.duckdb --clobber
+          echo "✓ Database uploaded successfully (${DB_SIZE})"
+
+      # ── Summary ───────────────────────────────────────────────────────────
+      - name: Pipeline summary
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "## SmartNews Pipeline Run" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Triggered by | ${{ github.event_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Run time | $(date -u '+%Y-%m-%d %H:%M UTC') |" >> $GITHUB_STEP_SUMMARY
+          echo "| Skip scraping | ${{ github.event.inputs.skip_scraping || 'false' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Skip enrichment | ${{ github.event.inputs.skip_enrichment || 'false' }} |" >> $GITHUB_STEP_SUMMARY
+          if [ -f smartnews.duckdb ]; then
+            DB_SIZE=$(du -sh smartnews.duckdb | cut -f1)
+            echo "| DB size | ${DB_SIZE} |" >> $GITHUB_STEP_SUMMARY
+          fi
