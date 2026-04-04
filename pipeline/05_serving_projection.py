@@ -985,8 +985,14 @@ def main():
                         article_count = excluded.article_count,
                         top_entry_ids = excluded.top_entry_ids,
                         generated_at  = excluded.generated_at
-                """, [(today, briefing_text, briefing_text, len(brief_articles),
-                       ",".join(top_ids), updated_at)])
+                """, [
+                    today,
+                    briefing_text,
+                    briefing_text,
+                    len(brief_articles),
+                    ",".join(top_ids),
+                    updated_at,
+                ])
 
                 briefing_status = "ok"
                 print(f"daily_briefing written: {len(brief_articles)} source articles")

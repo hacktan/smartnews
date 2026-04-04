@@ -101,6 +101,10 @@ Execution boundary (critical):
   - Workflow run `23968702286` completed successfully.
   - Release upload succeeded after workflow `permissions: contents: write` fix.
   - Live snapshot after run: `narratives_count=1`, `stories_count=0`, `briefing=404`.
+- Local Llama recovery status (latest):
+  - `pipeline/04_ai_enrichment.py` rerun with local provider produced `gold.compiled_stories=1`.
+  - `pipeline/05_serving_projection.py` rerun produced `serve.compiled_stories=1` and `serve.daily_briefing=ok`.
+  - Updated `smartnews.duckdb` uploaded to GitHub Release asset `db-latest`.
 
 ## 6) First Tasks For Next Agent (Priority)
 
@@ -109,6 +113,7 @@ Execution boundary (critical):
 3. Re-run live API smoke checks and capture counts, not just status codes.
 4. Inspect live multi-source routes (`/briefing`, `/narratives`, `/stories`) for data-populated rendering.
 5. If data is still missing, patch generation steps in `pipeline/03b_story_matching.py`, `pipeline/04_ai_enrichment.py`, and `pipeline/05_serving_projection.py`.
+6. If live API still shows stale data after DB release update, force API restart/redeploy so startup DB sync pulls latest `db-latest` asset.
 
 ## 7) Important File Map
 

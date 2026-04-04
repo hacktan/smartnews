@@ -287,7 +287,8 @@ def main():
 
     COMPILATION_BATCH_LIMIT = 20
     COMPILATION_MAX_SOURCES = 6
-    MIN_FULLTEXT_SOURCES = 2
+    MIN_FULLTEXT_SOURCES = int(os.getenv("COMPILATION_MIN_FULLTEXT_SOURCES", "2"))
+    MIN_COMPILED_BODY_CHARS = int(os.getenv("COMPILATION_MIN_BODY_CHARS", "600"))
 
     COMPILATION_PROMPT = """You are an expert news editor synthesizing multiple source reports about the same story into a single comprehensive, neutral article.
 
@@ -387,8 +388,11 @@ Rules:
                     )
                 data = json.loads(response.choices[0].message.content)
                 body_text = str(data.get("compiled_body", "")).strip()
-                if len(body_text) < 600:
-                    print(f"  Skipping {story_id[:10]}... compiled_body too short")
+                if len(body_text) < MIN_COMPILED_BODY_CHARS:
+                    print(
+                        f"  Skipping {story_id[:10]}... compiled_body too short "
+                        f"({len(body_text)} < {MIN_COMPILED_BODY_CHARS})"
+                    )
                     continue
 
                 sources_used = json.dumps(sorted({a[5] for a in selected}))

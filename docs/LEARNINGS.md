@@ -21,6 +21,8 @@ Practical notes and gotchas discovered while operating SmartNews.
 - Mark rows as processed even when extracted claim count is zero, otherwise pipeline reprocesses the same records forever.
 - `pipeline/04_ai_enrichment.py` now supports `AI_LLM_PROVIDER=local` with OpenAI-compatible endpoints (e.g. Ollama/vLLM).
 - GitHub-hosted Actions cannot call your local `127.0.0.1`; local Llama mode in CI requires either a self-hosted runner or a reachable network endpoint.
+- Local models may produce shorter compiled story bodies; `COMPILATION_MIN_BODY_CHARS` can be tuned for recovery runs (default: 600).
+- `COMPILATION_MIN_FULLTEXT_SOURCES` can be tuned for low-volume datasets where only one source has full text.
 
 ## Local LLM for claims (RTX 3060 Ti)
 
@@ -48,6 +50,7 @@ Practical notes and gotchas discovered while operating SmartNews.
 - If frontend routes return 500 while API is healthy, check server-component-incompatible handlers first (for example `onError` inside server component markup).
 - API now supports startup DB sync (`DB_SYNC_ON_STARTUP`, default `true`) so new deployments refresh `smartnews.duckdb` from `db-latest` automatically.
 - If live API data looks stale while local DB is current, redeploy/restart API service to trigger startup sync.
+- `serve.daily_briefing` write path had a parameter binding bug in projection; fixed by using flat positional params with `con.execute(...)`.
 
 ## Validation discipline
 

@@ -214,3 +214,35 @@ Interpretation:
 - Pipeline execution path is now stable again.
 - Narrative data is now visible live.
 - Multi-source compiled stories still require enrichment-capable execution (OpenAI key or reachable local/self-hosted provider).
+
+### Iteration E — Local Llama Enrichment Recovery (2026-04-04)
+
+Goal:
+- Address user-reported issue: latest CI run skipped AI enrichment.
+
+Execution:
+
+```bash
+AI_LLM_PROVIDER=local
+OPENAI_MODEL=qwen2.5:7b-instruct
+LOCAL_OPENAI_BASE_URL=http://127.0.0.1:11434/v1
+LOCAL_OPENAI_API_KEY=ollama
+COMPILATION_MIN_FULLTEXT_SOURCES=1
+COMPILATION_MIN_BODY_CHARS=250
+python pipeline/04_ai_enrichment.py
+python pipeline/05_serving_projection.py
+python pipeline/validate.py
+```
+
+Fixes applied before rerun:
+- `pipeline/05_serving_projection.py`: fixed `serve.daily_briefing` insert parameter binding bug.
+- `pipeline/04_ai_enrichment.py`: made compiled-body minimum length configurable via env (`COMPILATION_MIN_BODY_CHARS`).
+
+Observed result:
+- `gold.compiled_stories`: `1` written
+- `serve.compiled_stories`: `1` written
+- `serve.daily_briefing`: `ok` (1 row present)
+- `pipeline/validate.py`: all critical checks passed
+
+Operational note:
+- Updated local DB was uploaded to GitHub Release asset `db-latest/smartnews.duckdb`.
