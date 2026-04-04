@@ -500,21 +500,31 @@ def main():
     con.execute(f"""
         INSERT INTO serve.trending_topics
         SELECT
-            COALESCE(NULLIF(subtopic, ''), category) AS topic,
-            category,
-            COUNT(entry_id)                          AS article_count,
+            topic,
+            MODE(category) AS category,
+            COUNT(entry_id) AS article_count,
             ROUND(AVG(COALESCE(importance_score, 0.5)), 3) AS avg_importance,
-            ROUND(AVG(COALESCE(hype_score, 0.5)), 3)       AS avg_hype,
-            FIRST(feed_source)                       AS top_source,
-            MAX(published_at)                        AS latest_at,
+            ROUND(AVG(COALESCE(hype_score, 0.5)), 3) AS avg_hype,
+            FIRST(feed_source) AS top_source,
+            MAX(published_at) AS latest_at,
             STRING_AGG(entry_id, ',' ORDER BY importance_score DESC NULLS LAST)
-                FILTER (WHERE entry_id IS NOT NULL)  AS top_entry_ids,
-            TIMESTAMPTZ '{updated_at.isoformat()}'   AS updated_at
-        FROM gold_window
-        WHERE publish_date >= current_date - INTERVAL '7 days'
-        GROUP BY COALESCE(NULLIF(subtopic, ''), category), category
+                FILTER (WHERE entry_id IS NOT NULL) AS top_entry_ids,
+            TIMESTAMPTZ '{updated_at.isoformat()}' AS updated_at
+        FROM (
+            SELECT
+                entry_id,
+                feed_source,
+                published_at,
+                importance_score,
+                hype_score,
+                category,
+                COALESCE(NULLIF(subtopic, ''), category) AS topic
+            FROM gold_window
+            WHERE publish_date >= current_date - INTERVAL '7 days'
+        ) t
+        GROUP BY topic
         HAVING COUNT(entry_id) >= 1
-        ORDER BY article_count DESC, avg_importance DESC
+        ORDER BY article_count DESC, avg_importance DESC, topic
         LIMIT 50
     """)
     topics_count = con.execute("SELECT COUNT(*) FROM serve.trending_topics").fetchone()[0]
