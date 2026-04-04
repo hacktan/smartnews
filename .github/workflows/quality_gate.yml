@@ -28,10 +28,7 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Install deps
-        run: uv sync --frozen
-
-      - name: Install runtime server
-        run: uv pip install uvicorn
+        run: uv sync --frozen --project api
 
       - name: Download DB snapshot
         env:
@@ -47,7 +44,7 @@ jobs:
         env:
           DB_SYNC_ON_STARTUP: "false"
         run: |
-          nohup uv run python -m uvicorn api.main:app --host 127.0.0.1 --port 8000 > api.log 2>&1 &
+          nohup uv run --project api python -m uvicorn api.main:app --host 127.0.0.1 --port 8000 > api.log 2>&1 &
 
       - name: Wait for health
         run: |
@@ -63,7 +60,7 @@ jobs:
           exit 1
 
       - name: Run API smoke tests
-        run: uv run python tests/smoke_api.py http://127.0.0.1:8000
+        run: python tests/smoke_api.py http://127.0.0.1:8000
 
       - name: Upload API log on failure
         if: failure()
