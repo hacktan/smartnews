@@ -30,9 +30,19 @@ jobs:
       - name: Install deps
         run: uv sync --frozen
 
+      - name: Download DB snapshot
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download db-latest \
+            --repo ${{ github.repository }} \
+            --pattern smartnews.duckdb \
+            --output smartnews.duckdb \
+            --clobber
+
       - name: Start API
         env:
-          DB_SYNC_ON_STARTUP: "true"
+          DB_SYNC_ON_STARTUP: "false"
         run: |
           nohup uv run python -m uvicorn api.main:app --host 127.0.0.1 --port 8000 > api.log 2>&1 &
 
