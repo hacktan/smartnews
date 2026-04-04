@@ -85,6 +85,8 @@ Automated path:
 ```bash
 uv run python tests/smoke_api.py http://127.0.0.1:8000
 uv run python tests/smoke_api.py https://smartnews-api.onrender.com
+uv run python tests/contract_api.py http://127.0.0.1:8000
+uv run python tests/contract_api.py https://smartnews-api.onrender.com
 ```
 
 CI integration:

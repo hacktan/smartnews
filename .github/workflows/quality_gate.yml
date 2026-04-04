@@ -62,6 +62,9 @@ jobs:
       - name: Run API smoke tests
         run: python tests/smoke_api.py http://127.0.0.1:8000
 
+      - name: Run API contract checks
+        run: python tests/contract_api.py http://127.0.0.1:8000
+
       - name: Upload API log on failure
         if: failure()
         uses: actions/upload-artifact@v4

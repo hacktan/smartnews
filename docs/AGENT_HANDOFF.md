@@ -27,6 +27,7 @@ Live snapshot (2026-04-04, post Iteration J):
 
 - New quality automation foundation (2026-04-04):
   - `tests/smoke_api.py`: self-bootstrapping API smoke suite with dynamic ID discovery.
+  - `tests/contract_api.py`: strict response-key contract checks for critical endpoints.
   - `tests/smoke_frontend.py`: frontend route smoke suite (dynamic route coverage).
   - `.github/workflows/quality_gate.yml`: push/PR guardrail (backend local smoke + frontend lint/build).
   - `.github/workflows/monitor.yml`: production smoke monitor every 2 hours with incident issue auto-open/update.

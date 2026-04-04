@@ -17,6 +17,7 @@ Exit codes:
 from __future__ import annotations
 
 import json
+import socket
 import sys
 import time
 import urllib.request
@@ -31,6 +32,7 @@ BASE_URL = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith("-") 
 BASE_URL = BASE_URL.rstrip("/")
 STRICT = "--strict" in sys.argv
 TIMEOUT = 30  # seconds per request
+RETRIES = 3
 
 
 # ---------------------------------------------------------------------------
@@ -58,24 +60,40 @@ def get(path: str, params: dict | None = None) -> tuple[int, dict | list | None,
     url = BASE_URL + path
     if params:
         url += "?" + urllib.parse.urlencode(params)
-    t0 = time.time()
-    try:
-        req = urllib.request.Request(url, headers={"Accept": "application/json"})
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
-            body = resp.read().decode()
+    last_err: Exception | None = None
+    for attempt in range(1, RETRIES + 1):
+        t0 = time.time()
+        try:
+            req = urllib.request.Request(url, headers={"Accept": "application/json"})
+            with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
+                body = resp.read().decode()
+                elapsed = int((time.time() - t0) * 1000)
+                try:
+                    data = json.loads(body)
+                except json.JSONDecodeError:
+                    data = None
+                return resp.status, data, elapsed
+        except urllib.error.HTTPError as e:
             elapsed = int((time.time() - t0) * 1000)
-            try:
-                data = json.loads(body)
-            except json.JSONDecodeError:
-                data = None
-            return resp.status, data, elapsed
-    except urllib.error.HTTPError as e:
-        elapsed = int((time.time() - t0) * 1000)
-        return e.code, None, elapsed
-    except Exception as e:
-        elapsed = int((time.time() - t0) * 1000)
-        results.append(TestResult(f"GET {path}", "FAIL", f"Connection error: {e}", elapsed))
-        return 0, None, elapsed
+            return e.code, None, elapsed
+        except (urllib.error.URLError, TimeoutError, socket.timeout) as e:
+            last_err = e
+            if attempt < RETRIES:
+                time.sleep(2 * attempt)
+                continue
+            elapsed = int((time.time() - t0) * 1000)
+            results.append(TestResult(f"GET {path}", "FAIL", f"Connection error: {e}", elapsed))
+            return 0, None, elapsed
+        except Exception as e:
+            last_err = e
+            if attempt < RETRIES:
+                time.sleep(2 * attempt)
+                continue
+            elapsed = int((time.time() - t0) * 1000)
+            results.append(TestResult(f"GET {path}", "FAIL", f"Connection error: {e}", elapsed))
+            return 0, None, elapsed
+    results.append(TestResult(f"GET {path}", "FAIL", f"Connection error: {last_err}", 0))
+    return 0, None, 0
 
 
 def check(name: str, condition: bool, detail: str = "", ms: int = 0, warn_only: bool = False):

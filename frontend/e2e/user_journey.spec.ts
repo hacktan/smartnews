@@ -77,9 +77,23 @@ async function assertRouteHealthy(page: Page, path: string) {
     }
   };
 
+  const onRequestFailed = (request: { url: () => string; failure: () => { errorText?: string } | null }) => {
+    const url = request.url();
+    const failure = request.failure();
+    const errorText = failure?.errorText || 'unknown';
+    const isAbortedRscPrefetch = errorText.includes('ERR_ABORTED') && url.includes('_rsc=');
+    if (isAbortedRscPrefetch) {
+      return;
+    }
+    if (url.startsWith(FRONTEND_BASE_URL)) {
+      routeErrors.push(`requestfailed: ${url} (${errorText})`);
+    }
+  };
+
   page.on('pageerror', onPageError);
   page.on('console', onConsole);
   page.on('response', onResponse);
+  page.on('requestfailed', onRequestFailed);
 
   const response = await page.goto(`${FRONTEND_BASE_URL}${path}`, {
     waitUntil: 'networkidle',
@@ -92,6 +106,7 @@ async function assertRouteHealthy(page: Page, path: string) {
   const body = page.locator('body');
   await expect(body).toBeVisible();
   await expect(body).not.toContainText(/Application error|Internal Server Error|Unhandled Runtime Error/i);
+  await expect(page.locator('a[href]').first()).toBeVisible();
 
   await page.waitForTimeout(500);
   expect(routeErrors, `Runtime errors detected on ${path}:\n${routeErrors.join('\n')}`).toEqual([]);
@@ -99,6 +114,7 @@ async function assertRouteHealthy(page: Page, path: string) {
   page.off('pageerror', onPageError);
   page.off('console', onConsole);
   page.off('response', onResponse);
+  page.off('requestfailed', onRequestFailed);
 }
 
 test('live user journey across critical routes', async ({ page }) => {
