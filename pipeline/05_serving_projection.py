@@ -36,6 +36,7 @@ DB_PATH = os.getenv("DB_PATH", str(Path(__file__).parent.parent / "smartnews.duc
 LOOKBACK_DAYS = 30
 MIN_FULLTEXT_CHARS = 300
 MIN_SUMMARY_CHARS = 120
+TARGET_STORY_ARC_COUNT = int(os.getenv("TARGET_STORY_ARC_COUNT", "20"))
 
 
 def cosine_dense(v1: list, v2: list) -> float:
@@ -767,7 +768,7 @@ def main():
         ))
 
     # Fallback arcs from story clusters to avoid sparse narrative pages when subtopics are too granular.
-    if len(arc_insert) < 6 and cluster_map:
+    if len(arc_insert) < TARGET_STORY_ARC_COUNT and cluster_map:
         # cards_data layout:
         # [0]entry_id [1]title [2]dehyped [3]source [4]published_at [5]publish_date
         # [6]category [7]subtopic [8]summary [9]link [10]hype [11]cred [12]importance ...
@@ -832,6 +833,9 @@ def main():
                 updated_at,
             ))
             existing_arc_ids.add(arc_id)
+
+            if len(arc_insert) >= TARGET_STORY_ARC_COUNT:
+                break
 
     con.execute("DELETE FROM serve.story_arcs")
     if arc_insert:

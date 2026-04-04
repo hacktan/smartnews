@@ -19,11 +19,13 @@ load_dotenv()
 
 DB_PATH = os.getenv("DB_PATH", str(Path(__file__).parent.parent / "smartnews.duckdb"))
 
-WINDOW_DAYS = 7
-TITLE_JACCARD_THRESHOLD = 0.28
-EMBEDDING_COSINE_THRESHOLD = 0.72
-ENTITY_OVERLAP_THRESHOLD = 0.30
-MIN_TIERS_AGREE = 1
+WINDOW_DAYS = int(os.getenv("STORY_MATCH_WINDOW_DAYS", "14"))
+MAX_TIME_DIFF_HOURS = int(os.getenv("STORY_MATCH_MAX_TIME_DIFF_HOURS", "96"))
+TITLE_JACCARD_THRESHOLD = float(os.getenv("STORY_MATCH_TITLE_JACCARD", "0.24"))
+EMBEDDING_COSINE_THRESHOLD = float(os.getenv("STORY_MATCH_EMBEDDING_COSINE", "0.72"))
+ENTITY_OVERLAP_THRESHOLD = float(os.getenv("STORY_MATCH_ENTITY_OVERLAP", "0.30"))
+MIN_TIERS_AGREE = int(os.getenv("STORY_MATCH_MIN_TIERS", "1"))
+MIN_ARTICLES_PER_GROUP = int(os.getenv("STORY_MATCH_MIN_ARTICLES_PER_GROUP", "2"))
 
 STOP_WORDS = {
     "the", "a", "an", "is", "are", "was", "were", "in", "on", "at", "to", "for",
@@ -91,10 +93,15 @@ def main():
 
     rows = con.execute(f"""
         SELECT entry_id, title, feed_source, category, published_at,
-               embedding, entities, credibility_score
+               embedding, entities, credibility_score, clean_summary
         FROM gold.news_articles
-        WHERE enriched_at IS NOT NULL
-          AND published_at >= current_date - INTERVAL '{WINDOW_DAYS} days'
+        WHERE published_at >= current_date - INTERVAL '{WINDOW_DAYS} days'
+          AND title IS NOT NULL
+          AND TRIM(title) != ''
+          AND (
+                COALESCE(LENGTH(clean_summary), 0) >= 80
+                OR COALESCE(LENGTH(full_text), 0) >= 300
+              )
         ORDER BY published_at DESC
     """).fetchall()
 
@@ -107,7 +114,7 @@ def main():
 
     article_data = []
     for row in rows:
-        entry_id, title, feed_source, category, published_at, embedding_json, entities_json, credibility_score = row
+        entry_id, title, feed_source, category, published_at, embedding_json, entities_json, credibility_score, clean_summary = row
 
         embedding = None
         if embedding_json:
@@ -132,12 +139,15 @@ def main():
             "published_at":      published_at,
             "embedding":         embedding,
             "entities":          entities,
+            "summary":           clean_summary or "",
             "credibility_score": credibility_score or 0.5,
         })
 
     print(f"Prepared {len(article_data)} articles for matching.")
 
     matches = []
+    max_time_diff_seconds = MAX_TIME_DIFF_HOURS * 3600
+
     for i in range(len(article_data)):
         for j in range(i + 1, len(article_data)):
             a = article_data[i]
@@ -148,7 +158,10 @@ def main():
 
             if a["published_at"] and b["published_at"]:
                 time_diff = abs((a["published_at"] - b["published_at"]).total_seconds())
-                if time_diff > 48 * 3600:
+                if time_diff > max_time_diff_seconds:
+                    # Rows are sorted by published_at DESC, so newer-vs-much-older can break early.
+                    if b["published_at"] <= a["published_at"]:
+                        break
                     continue
 
             tiers_matched = 0
@@ -182,7 +195,12 @@ def main():
                 or emb_sim >= 0.82
                 or ent_sim >= 0.60
                 or (title_sim >= 0.28 and (emb_sim >= 0.72 or ent_sim >= 0.35))
+                or title_sim >= 0.62
             )
+
+            if a.get("category") and b.get("category") and a["category"] != b["category"]:
+                # Cross-category links are noisier; require a stronger lexical or semantic signal.
+                strong_signal = strong_signal and (title_sim >= 0.60 or emb_sim >= 0.82)
 
             if tiers_matched >= MIN_TIERS_AGREE and strong_signal:
                 avg_score = sum(scores) / len(scores)
@@ -213,7 +231,7 @@ def main():
 
     story_groups = []
     for root, member_indices in groups.items():
-        if len(member_indices) < 2:
+        if len(member_indices) < MIN_ARTICLES_PER_GROUP:
             continue
         members = [article_data[i] for i in member_indices]
         sources = set(m["feed_source"] for m in members)

@@ -11,6 +11,7 @@ CORS is configured via the CORS_ORIGINS env var (comma-separated origins).
 Note: this file may receive no-op commits to force Render redeploy when DB release asset is refreshed.
 Deploy marker: 2026-04-04 source-expansion refresh.
 Deploy marker: 2026-04-04 broad-news expansion refresh.
+Deploy marker: 2026-04-04 story-matching expansion refresh.
 """
 import logging
 import os
