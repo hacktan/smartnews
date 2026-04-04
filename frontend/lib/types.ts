@@ -260,3 +260,23 @@ export interface CompiledStoriesResponse {
   items: CompiledStory[];
   total: number;
 }
+
+export interface StoryClaim {
+  story_id: string;
+  claim_group_id: string;
+  claim_text: string;
+  claim_normalized: string | null;
+  verdict: "CONSENSUS" | "DISPUTED" | "SINGLE_SOURCE";
+  confidence: number | null;
+  confirm_count: number | null;
+  dispute_count: number | null;
+  sources_confirming: string | null; // JSON list
+  sources_disputing: string | null;  // JSON list
+  entry_ids: string | null;          // JSON list
+}
+
+export interface StoryClaimsResponse {
+  story_id: string;
+  items: StoryClaim[];
+  total: number;
+}

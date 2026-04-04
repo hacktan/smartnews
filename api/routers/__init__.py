@@ -11,6 +11,7 @@ from .briefing import router as briefing_router
 from .topics import router as topics_router
 from .narratives import router as narratives_router
 from .stories import router as stories_router
+from .claims import router as claims_router
 
 __all__ = [
     "home_router",
@@ -26,4 +27,5 @@ __all__ = [
     "topics_router",
     "narratives_router",
     "stories_router",
+    "claims_router",
 ]

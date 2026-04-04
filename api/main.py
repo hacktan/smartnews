@@ -34,6 +34,7 @@ from .routers import (
     topics_router,
     narratives_router,
     stories_router,
+    claims_router,
 )
 
 logging.basicConfig(
@@ -134,6 +135,7 @@ app.include_router(briefing_router, prefix="/api")
 app.include_router(topics_router, prefix="/api")
 app.include_router(narratives_router, prefix="/api")
 app.include_router(stories_router, prefix="/api")
+app.include_router(claims_router, prefix="/api")
 
 
 @app.get("/")

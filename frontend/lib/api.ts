@@ -16,6 +16,7 @@ import type {
   NarrativeDetail,
   CompiledStoriesResponse,
   CompiledStoryDetail,
+  StoryClaimsResponse,
 } from "./types";
 
 const BASE = (
@@ -119,4 +120,9 @@ export const api = {
 
   compiledStory: (storyId: string) =>
     apiFetch<CompiledStoryDetail>(`/api/story/${storyId}`),
+
+  storyClaims: (storyId: string) =>
+    apiFetch<StoryClaimsResponse>(`/api/story/${storyId}/claims`, {
+      next: { revalidate: 180 },
+    }),
 };

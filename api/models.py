@@ -340,6 +340,30 @@ class CompiledStoriesResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Story Claim Verification
+# ---------------------------------------------------------------------------
+
+class StoryClaim(BaseModel):
+    story_id: str
+    claim_group_id: str
+    claim_text: str
+    claim_normalized: Optional[str] = None
+    verdict: str
+    confidence: Optional[float] = None
+    confirm_count: Optional[int] = None
+    dispute_count: Optional[int] = None
+    sources_confirming: Optional[str] = None   # JSON list
+    sources_disputing: Optional[str] = None    # JSON list
+    entry_ids: Optional[str] = None            # JSON list
+
+
+class StoryClaimsResponse(BaseModel):
+    story_id: str
+    items: list[StoryClaim]
+    total: int
+
+
+# ---------------------------------------------------------------------------
 # Daily Briefing (7A)
 # ---------------------------------------------------------------------------
 

@@ -13,14 +13,18 @@
 #   serve.hype_snapshots    — daily score snapshots by topic
 #   serve.story_arcs        — narrative arcs grouped by subtopic
 #   serve.compiled_stories  — AI-compiled multi-source articles
+#   serve.story_claims      — per-story claim verification view
 #
 # Strategy: full refresh on every run (serve tables are small and fast to rebuild).
 
+import hashlib
 import json
 import math
 import os
+import re
 from collections import Counter
 from datetime import datetime, timezone
+from difflib import SequenceMatcher
 from pathlib import Path
 
 import duckdb
@@ -231,6 +235,24 @@ def main():
             last_published    TIMESTAMPTZ,
             compiled_at       TIMESTAMPTZ,
             updated_at        TIMESTAMPTZ
+        )
+    """)
+
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS serve.story_claims (
+            story_id           VARCHAR,
+            claim_group_id     VARCHAR,
+            claim_text         VARCHAR,
+            claim_normalized   VARCHAR,
+            verdict            VARCHAR,
+            confidence         DOUBLE,
+            confirm_count      INTEGER,
+            dispute_count      INTEGER,
+            sources_confirming VARCHAR,
+            sources_disputing  VARCHAR,
+            entry_ids          VARCHAR,
+            updated_at         TIMESTAMPTZ,
+            PRIMARY KEY (story_id, claim_group_id)
         )
     """)
 
@@ -745,6 +767,118 @@ def main():
         print(f"compiled_stories: skipped ({e})")
 
     # ── 13. serve.daily_briefing (OpenAI) ────────────────────────────────────
+    cnt_story_claims = 0
+    try:
+        claim_rows = con.execute("""
+            SELECT
+                story_id,
+                entry_id,
+                source_name,
+                claim_text,
+                claim_normalized,
+                confidence
+            FROM gold.article_claims
+            WHERE story_id IS NOT NULL
+              AND claim_text IS NOT NULL
+              AND claim_text != ''
+        """).fetchall()
+
+        grouped_by_story: dict[str, list[tuple]] = {}
+        for row in claim_rows:
+            grouped_by_story.setdefault(row[0], []).append(row)
+
+        out_rows = []
+        for story_id, items in grouped_by_story.items():
+            clusters: list[dict] = []
+            for item in items:
+                _, entry_id, source_name, claim_text, claim_norm, confidence = item
+                if not claim_norm:
+                    continue
+
+                matched_cluster = None
+                for cluster in clusters:
+                    sim = SequenceMatcher(None, claim_norm, cluster["rep_norm"]).ratio()
+                    if sim >= 0.9:
+                        matched_cluster = cluster
+                        break
+
+                if matched_cluster is None:
+                    matched_cluster = {"rep_text": claim_text, "rep_norm": claim_norm, "claims": []}
+                    clusters.append(matched_cluster)
+
+                matched_cluster["claims"].append(
+                    {
+                        "entry_id": entry_id,
+                        "source_name": source_name or "",
+                        "claim_text": claim_text,
+                        "confidence": float(confidence or 0.5),
+                    }
+                )
+
+            for cluster in clusters:
+                claim_items = cluster["claims"]
+                if not claim_items:
+                    continue
+
+                confirming_sources = sorted({c["source_name"] for c in claim_items if c["source_name"]})
+                entry_ids = sorted({c["entry_id"] for c in claim_items if c["entry_id"]})
+                confidence = round(
+                    sum(c["confidence"] for c in claim_items) / max(1, len(claim_items)),
+                    3,
+                )
+
+                numeric_variants = {
+                    tuple(re.findall(r"\d+(?:\.\d+)?", c["claim_text"]))
+                    for c in claim_items
+                }
+                has_numeric_conflict = len({v for v in numeric_variants if v}) > 1
+
+                if has_numeric_conflict and len(confirming_sources) >= 2:
+                    verdict = "DISPUTED"
+                    sources_disputing = confirming_sources
+                elif len(confirming_sources) >= 2:
+                    verdict = "CONSENSUS"
+                    sources_disputing = []
+                else:
+                    verdict = "SINGLE_SOURCE"
+                    sources_disputing = []
+
+                representative_text = max((c["claim_text"] for c in claim_items), key=len)[:280]
+                group_id = hashlib.md5(
+                    f"{story_id}|{cluster['rep_norm']}".encode("utf-8")
+                ).hexdigest()
+
+                out_rows.append(
+                    (
+                        story_id,
+                        group_id,
+                        representative_text,
+                        cluster["rep_norm"][:280],
+                        verdict,
+                        confidence,
+                        len(confirming_sources),
+                        len(sources_disputing),
+                        json.dumps(confirming_sources),
+                        json.dumps(sources_disputing),
+                        json.dumps(entry_ids),
+                        updated_at,
+                    )
+                )
+
+        con.execute("DELETE FROM serve.story_claims")
+        if out_rows:
+            con.executemany("""
+                INSERT INTO serve.story_claims
+                    (story_id, claim_group_id, claim_text, claim_normalized, verdict,
+                     confidence, confirm_count, dispute_count, sources_confirming,
+                     sources_disputing, entry_ids, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, out_rows)
+        cnt_story_claims = len(out_rows)
+        print(f"story_claims: {cnt_story_claims} grouped claims written")
+    except Exception as e:
+        print(f"story_claims: skipped ({e})")
+
     briefing_status = "skipped"
     openai_key = os.getenv("OPENAI_API_KEY")
 
@@ -838,6 +972,7 @@ def main():
     cnt_ent_uniq      = con.execute("SELECT COUNT(DISTINCT entity_name) FROM serve.entity_index").fetchone()[0]
     cnt_snaps_final   = con.execute("SELECT COUNT(*) FROM serve.hype_snapshots").fetchone()[0]
     cnt_arcs_final    = con.execute("SELECT COUNT(*) FROM serve.story_arcs").fetchone()[0]
+    cnt_claims_final  = con.execute("SELECT COUNT(*) FROM serve.story_claims").fetchone()[0]
     cat_count         = con.execute("SELECT COUNT(DISTINCT category) FROM serve.category_feeds").fetchone()[0]
 
     print(f"\n=== Serving Layer Summary ===")
@@ -850,6 +985,7 @@ def main():
     print(f"hype_snapshots   : {cnt_snaps_final} rows")
     print(f"story_arcs       : {cnt_arcs_final} narrative arcs")
     print(f"compiled_stories : {cnt_compiled} compiled stories")
+    print(f"story_claims     : {cnt_claims_final} grouped claims")
     print(f"daily_briefing   : {briefing_status}")
     print(f"Lookback window  : {LOOKBACK_DAYS} days")
 
@@ -858,6 +994,7 @@ def main():
         f"Serving OK: {cnt_cards_final} cards, {cnt_topics_final} topics, "
         f"{cnt_clusts_final} clusters, {cnt_ent_uniq} entities, "
         f"{cat_count} categories, arcs={cnt_arcs_final}, compiled={cnt_compiled}, "
+        f"claims={cnt_claims_final}, "
         f"briefing={briefing_status}"
     )
 

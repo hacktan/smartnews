@@ -1,5 +1,5 @@
 import { api, NotFoundError } from "@/lib/api";
-import type { CompiledStoryDetail, ArticleCard } from "@/lib/types";
+import type { CompiledStoryDetail, ArticleCard, StoryClaim } from "@/lib/types";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -28,6 +28,28 @@ function parseJsonList(raw: string | null): string[] {
   } catch {
     return raw.split(",").map((s) => s.trim()).filter(Boolean);
   }
+}
+
+function verdictUi(verdict: StoryClaim["verdict"]) {
+  if (verdict === "DISPUTED") {
+    return {
+      label: "Disputed",
+      box: "border-orange-200 bg-orange-50",
+      badge: "bg-orange-100 text-orange-700",
+    };
+  }
+  if (verdict === "CONSENSUS") {
+    return {
+      label: "Consensus",
+      box: "border-green-200 bg-green-50",
+      badge: "bg-green-100 text-green-700",
+    };
+  }
+  return {
+    label: "Single Source",
+    box: "border-gray-200 bg-gray-50",
+    badge: "bg-gray-100 text-gray-700",
+  };
 }
 
 interface KeyClaim {
@@ -83,6 +105,7 @@ function SourceArticleCard({ article }: { article: ArticleCard }) {
 export default async function StoryDetailPage({ params }: Props) {
   const { id } = await params;
   let story: CompiledStoryDetail;
+  let claims: StoryClaim[] = [];
   try {
     story = await api.compiledStory(id);
   } catch (e) {
@@ -95,6 +118,13 @@ export default async function StoryDetailPage({ params }: Props) {
         </Link>
       </div>
     );
+  }
+
+  try {
+    const claimResp = await api.storyClaims(id);
+    claims = claimResp.items;
+  } catch {
+    claims = [];
   }
 
   const sources = parseJsonList(story.sources_used);
@@ -156,7 +186,50 @@ export default async function StoryDetailPage({ params }: Props) {
       )}
 
       {/* Key Claims */}
-      {keyClaims.length > 0 && (
+      {claims.length > 0 && (
+        <section className="mb-8">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-3">
+            Claim Verification
+          </h2>
+          <div className="space-y-3">
+            {claims.map((claim) => {
+              const ui = verdictUi(claim.verdict);
+              const confirming = parseJsonList(claim.sources_confirming);
+              const disputing = parseJsonList(claim.sources_disputing);
+              return (
+                <div key={claim.claim_group_id} className={`rounded-lg border p-4 ${ui.box}`}>
+                  <div className="mb-2 flex items-center gap-2">
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${ui.badge}`}>
+                      {ui.label}
+                    </span>
+                    {claim.confidence != null && (
+                      <span className="text-xs text-gray-500">
+                        Confidence: {Math.round(claim.confidence * 100)}%
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-800 mb-2">{claim.claim_text}</p>
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    {confirming.map((src) => (
+                      <span key={`${claim.claim_group_id}-c-${src}`} className="rounded-full bg-green-100 px-2 py-0.5 text-green-700">
+                        + {src}
+                      </span>
+                    ))}
+                    {disputing.map((src) => (
+                      <span key={`${claim.claim_group_id}-d-${src}`} className="rounded-full bg-orange-100 px-2 py-0.5 text-orange-700">
+                        - {src}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* Key Claims (fallback from compiled payload) */}
+      {claims.length === 0 && keyClaims.length > 0 && (
         <section className="mb-8">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-3">
             Key Claims

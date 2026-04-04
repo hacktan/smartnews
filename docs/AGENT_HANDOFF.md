@@ -34,8 +34,8 @@ where they disagree, and what's missing.
 | 2 | GitHub Actions cron | ✅ DONE | `.github/workflows/pipeline.yml`, db-latest release pattern |
 | **3** | **API db.py rewrite + Render.com** | **🟨 IN PROGRESS — CODE DONE** | Render deploy pending |
 | 4 | Frontend → Vercel | ⬜ TODO | Only API URL env var changes |
-| 5 | Claim extraction pipeline | ⬜ TODO | `pipeline/04b_claim_extraction.py` (new file) |
-| 6 | Claims API + frontend `/story/[id]` | ⬜ TODO | Depends on Phase 5 |
+| 5 | Claim extraction pipeline | ✅ DONE | `pipeline/04b_claim_extraction.py` |
+| 6 | Claims API + frontend `/story/[id]` | ✅ DONE | `/api/story/{id}/claims` + frontend verification section |
 
 ---
 
@@ -127,6 +127,7 @@ Single file `smartnews.duckdb`, organized in schemas:
 | `serve.hype_snapshots` | `(topic, snapshot_date)` | Daily score snapshots (trend tracking) |
 | `serve.story_arcs` | `arc_id` | Narrative arcs grouped by subtopic |
 | `serve.compiled_stories` | `story_id` | Compiled multi-source stories |
+| `serve.story_claims` | `(story_id, claim_group_id)` | Claim-level verification output |
 
 ---
 
@@ -139,6 +140,7 @@ Single file `smartnews.duckdb`, organized in schemas:
 03_gold_aggregation      → aggregate → gold.news_articles + gold.daily_*
 04_ai_enrichment (pass1) → OpenAI → gold.news_articles [enriched_at, embedding]
 03b_story_matching       → uses embeddings → gold.story_matches
+04b_claim_extraction     → extracts claims → gold.article_claims
 04_ai_enrichment (pass2) → skips enrichment (done), compiles → gold.compiled_stories
 05_serving_projection    → rebuilds all serve.* tables
 validate                 → checks row counts, exits 1 on failure
@@ -159,6 +161,7 @@ uv run python pipeline/02_silver_transformation.py
 uv run python pipeline/03_gold_aggregation.py
 uv run python pipeline/04_ai_enrichment.py
 uv run python pipeline/03b_story_matching.py
+uv run python pipeline/04b_claim_extraction.py
 uv run python pipeline/04_ai_enrichment.py
 uv run python pipeline/05_serving_projection.py
 uv run python pipeline/validate.py

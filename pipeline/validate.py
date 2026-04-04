@@ -1,6 +1,6 @@
-# Pipeline Validation
+﻿# Pipeline Validation
 # Checks that all pipeline stages produced expected data.
-# Exits with code 1 if any critical check fails — used by GitHub Actions.
+# Exits with code 1 if any critical check fails â€” used by GitHub Actions.
 #
 # Usage: uv run python pipeline/validate.py
 
@@ -15,7 +15,7 @@ load_dotenv()
 
 DB_PATH = os.getenv("DB_PATH", str(Path(__file__).parent.parent / "smartnews.duckdb"))
 
-# ── Thresholds ────────────────────────────────────────────────────────────────
+# â”€â”€ Thresholds â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 MIN_BRONZE_ROWS = 10        # at least 10 articles ingested
 MIN_SILVER_ROWS = 5         # at least 5 cleaned articles
 MIN_GOLD_ROWS = 5           # at least 5 gold articles
@@ -52,7 +52,7 @@ def main() -> int:
         print(f"[FAIL] CRITICAL: Cannot open database: {e}")
         return 1
 
-    # ── Bronze ────────────────────────────────────────────────────────────────
+    # â”€â”€ Bronze â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     print("[ Bronze ]")
     try:
         bronze_total = con.execute("SELECT COUNT(*) FROM bronze.rss_raw").fetchone()[0]
@@ -71,9 +71,9 @@ def main() -> int:
         check("bronze.article_fulltext successes", ft_ok, 0, critical=False)
     except Exception as e:
         ERRORS.append(f"Bronze check failed: {e}")
-        print(f"  ✗ Bronze check failed: {e}")
+        print(f"  âœ- Bronze check failed: {e}")
 
-    # ── Silver ────────────────────────────────────────────────────────────────
+    # â”€â”€ Silver â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     print("\n[ Silver ]")
     try:
         silver_total = con.execute("SELECT COUNT(*) FROM silver.rss_cleaned").fetchone()[0]
@@ -85,9 +85,9 @@ def main() -> int:
         check("silver distinct categories", silver_cats, 1, critical=False)
     except Exception as e:
         ERRORS.append(f"Silver check failed: {e}")
-        print(f"  ✗ Silver check failed: {e}")
+        print(f"  âœ- Silver check failed: {e}")
 
-    # ── Gold ──────────────────────────────────────────────────────────────────
+    # â”€â”€ Gold â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     print("\n[ Gold ]")
     try:
         gold_total = con.execute("SELECT COUNT(*) FROM gold.news_articles").fetchone()[0]
@@ -98,7 +98,7 @@ def main() -> int:
         ).fetchone()[0]
         enrich_frac = gold_enriched / gold_total if gold_total > 0 else 0
         check("gold enriched fraction", enrich_frac, MIN_ENRICHED_FRACTION, critical=False)
-        print(f"     → {gold_enriched}/{gold_total} articles enriched ({enrich_frac:.1%})")
+        print(f"     â†’ {gold_enriched}/{gold_total} articles enriched ({enrich_frac:.1%})")
 
         gold_with_emb = con.execute(
             "SELECT COUNT(*) FROM gold.news_articles WHERE embedding IS NOT NULL"
@@ -116,11 +116,18 @@ def main() -> int:
         except Exception:
             pass
         check("gold.story_matches", story_matches, 0, critical=False)
+
+        article_claims = 0
+        try:
+            article_claims = con.execute("SELECT COUNT(*) FROM gold.article_claims").fetchone()[0]
+        except Exception:
+            pass
+        check("gold.article_claims", article_claims, 0, critical=False)
     except Exception as e:
         ERRORS.append(f"Gold check failed: {e}")
-        print(f"  ✗ Gold check failed: {e}")
+        print(f"  âœ- Gold check failed: {e}")
 
-    # ── Serve ─────────────────────────────────────────────────────────────────
+    # â”€â”€ Serve â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     print("\n[ Serve ]")
     try:
         cards = con.execute("SELECT COUNT(*) FROM serve.article_cards").fetchone()[0]
@@ -143,18 +150,25 @@ def main() -> int:
             "SELECT COUNT(DISTINCT entity_name) FROM serve.entity_index"
         ).fetchone()[0]
         check("serve.entity_index distinct entities", entity_uniq, 0, critical=False)
-        print(f"     → {entity_rows} mentions, {entity_uniq} distinct entities")
+        print(f"     â†’ {entity_rows} mentions, {entity_uniq} distinct entities")
 
         arcs = con.execute("SELECT COUNT(*) FROM serve.story_arcs").fetchone()[0]
         check("serve.story_arcs", arcs, 0, critical=False)
+
+        story_claims = 0
+        try:
+            story_claims = con.execute("SELECT COUNT(*) FROM serve.story_claims").fetchone()[0]
+        except Exception:
+            pass
+        check("serve.story_claims", story_claims, 0, critical=False)
 
         briefing = con.execute("SELECT COUNT(*) FROM serve.daily_briefing").fetchone()[0]
         check("serve.daily_briefing", briefing, 0, critical=False)
     except Exception as e:
         ERRORS.append(f"Serve check failed: {e}")
-        print(f"  ✗ Serve check failed: {e}")
+        print(f"  âœ- Serve check failed: {e}")
 
-    # ── Score sanity ──────────────────────────────────────────────────────────
+    # â”€â”€ Score sanity â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     print("\n[ Score Sanity ]")
     try:
         score_check = con.execute("""
@@ -170,23 +184,23 @@ def main() -> int:
 
         if score_check and score_check[0] is not None:
             avg_hype, avg_cred, avg_imp, min_hype, max_hype = score_check
-            print(f"  ✓  Avg hype={avg_hype}, credibility={avg_cred}, importance={avg_imp}")
+            print(f"  âœ“  Avg hype={avg_hype}, credibility={avg_cred}, importance={avg_imp}")
             print(f"     hype range: [{min_hype}, {max_hype}]")
 
             # Scores must be in [0, 1]
             if min_hype is not None and (min_hype < 0 or max_hype > 1):
                 ERRORS.append(f"hype_score out of [0,1] range: [{min_hype}, {max_hype}]")
-                print(f"  ✗  hype_score out of range!")
+                print(f"  âœ-  hype_score out of range!")
         else:
-            print("  ⚠  No enriched articles yet — score sanity skipped")
+            print("  âš   No enriched articles yet â€” score sanity skipped")
     except Exception as e:
         WARNINGS.append(f"Score sanity check failed: {e}")
-        print(f"  ⚠  Score sanity check failed: {e}")
+        print(f"  âš   Score sanity check failed: {e}")
 
     con.close()
 
-    # ── Summary ───────────────────────────────────────────────────────────────
-    print("\n" + "─" * 50)
+    # â”€â”€ Summary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    print("\n" + "â”€" * 50)
     if WARNINGS:
         print(f"[WARN] {len(WARNINGS)} warning(s):")
         for w in WARNINGS:
@@ -207,3 +221,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
+

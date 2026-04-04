@@ -10,6 +10,8 @@ Tagline: "News that checks its claims"
 
 - [docs/AGENT_HANDOFF.md](docs/AGENT_HANDOFF.md) - Full project state and runbook
 - [docs/README.md](docs/README.md) - Documentation index (active vs archived)
+- [docs/VALIDATIONS.md](docs/VALIDATIONS.md) - Validation commands and acceptance checks
+- [docs/LEARNINGS.md](docs/LEARNINGS.md) - Operational learnings and gotchas
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - Technical architecture details
 - [docs/PRODUCT_GOALS.md](docs/PRODUCT_GOALS.md) - Product roadmap
 
@@ -55,6 +57,7 @@ uv run python pipeline/02_silver_transformation.py
 uv run python pipeline/03_gold_aggregation.py
 uv run python pipeline/04_ai_enrichment.py      # pass 1: enrich + embeddings
 uv run python pipeline/03b_story_matching.py    # needs embeddings
+uv run python pipeline/04b_claim_extraction.py  # extract atomic claims for matched stories
 uv run python pipeline/04_ai_enrichment.py      # pass 2: compile stories
 uv run python pipeline/05_serving_projection.py
 uv run python pipeline/validate.py              # exits 1 on failure
