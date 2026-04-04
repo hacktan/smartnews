@@ -13,6 +13,7 @@ Deploy marker: 2026-04-04 source-expansion refresh.
 Deploy marker: 2026-04-04 broad-news expansion refresh.
 Deploy marker: 2026-04-04 story-matching expansion refresh.
 Deploy marker: 2026-04-04 compiled-quality restore refresh.
+Deploy marker: 2026-04-04 pending-detail-disable refresh.
 """
 import logging
 import os
