@@ -1,0 +1,91 @@
+name: Quality Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend-smoke:
+    name: Backend Smoke (Local API)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install deps
+        run: uv sync --frozen
+
+      - name: Start API
+        env:
+          DB_SYNC_ON_STARTUP: "true"
+        run: |
+          nohup uv run uvicorn api.main:app --host 127.0.0.1 --port 8000 > api.log 2>&1 &
+
+      - name: Wait for health
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:8000/health > /dev/null; then
+              echo "API healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "API did not become healthy in time"
+          tail -n 200 api.log || true
+          exit 1
+
+      - name: Run API smoke tests
+        run: uv run python tests/smoke_api.py http://127.0.0.1:8000
+
+      - name: Upload API log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-log
+          path: api.log
+
+  frontend-quality:
+    name: Frontend Lint + Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        env:
+          NEXT_PUBLIC_API_URL: https://smartnews-api.onrender.com
+        run: npm run build

@@ -1,7 +1,7 @@
 # SmartNews - Agent Handoff
 
 > Canonical handoff doc for the next agent.
-> Last updated: 2026-04-04 (post Iteration J)
+> Last updated: 2026-04-04 (post Iteration K planning/automation pass)
 > Repo: hacktan/smartnews
 > Local path: c:\Users\haktan\Documents\SmartNews
 
@@ -25,6 +25,12 @@ Live snapshot (2026-04-04, post Iteration J):
 
 ## 2) What Is Implemented
 
+- New quality automation foundation (2026-04-04):
+  - `tests/smoke_api.py`: self-bootstrapping API smoke suite with dynamic ID discovery.
+  - `tests/smoke_frontend.py`: frontend route smoke suite (dynamic route coverage).
+  - `.github/workflows/quality_gate.yml`: push/PR guardrail (backend local smoke + frontend lint/build).
+  - `.github/workflows/monitor.yml`: production smoke monitor every 2 hours with incident issue auto-open/update.
+  - `docs/ROADMAP.md`: agent-executable roadmap with task cards, boundaries, and validation/rollback templates.
 - DuckDB migration is complete (pipeline + API).
 - Claim extraction pipeline exists: `pipeline/04b_claim_extraction.py`.
 - Claims API exists: `GET /api/story/{story_id}/claims`.
@@ -139,6 +145,11 @@ Execution boundary (critical):
 
 - Pipeline core: `pipeline/`
 - Validation script: `pipeline/validate.py`
+- API smoke tests: `tests/smoke_api.py`
+- Frontend smoke tests: `tests/smoke_frontend.py`
+- Quality gate workflow: `.github/workflows/quality_gate.yml`
+- Production monitor workflow: `.github/workflows/monitor.yml`
+- Strategic roadmap: `docs/ROADMAP.md`
 - Claim extraction: `pipeline/04b_claim_extraction.py`
 - Serving projection: `pipeline/05_serving_projection.py`
 - API app: `api/`
@@ -158,3 +169,4 @@ Execution boundary (critical):
 - [x] Handoff doc updated to current production state
 - [x] Click-tracker fallback API URL updated to Render
 - [x] Live validation pass completed and documented (see `docs/VALIDATIONS.md` Iterations A-G)
+- [x] Automated smoke foundation added (`tests/` + quality/monitor workflows)

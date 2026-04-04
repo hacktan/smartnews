@@ -80,6 +80,17 @@ Pass criteria:
 - Story detail returns 200 for a valid `story_id`.
 - Story claims endpoint returns 200 and a valid JSON object.
 
+Automated path:
+
+```bash
+uv run python tests/smoke_api.py http://127.0.0.1:8000
+uv run python tests/smoke_api.py https://smartnews-api.onrender.com
+```
+
+CI integration:
+- `.github/workflows/quality_gate.yml` runs local API smoke on push/PR.
+- `.github/workflows/monitor.yml` runs live API smoke every 2 hours.
+
 ## 3) Frontend Validation
 
 Local:
@@ -101,6 +112,15 @@ curl -s -o NUL -w "%{http_code}" https://frontend-chi-brown-98.vercel.app/search
 Pass criteria:
 - All routes above return `200`.
 - Story page renders claims section when `/api/story/<id>/claims` has data.
+
+Automated path:
+
+```bash
+uv run python tests/smoke_frontend.py https://frontend-chi-brown-98.vercel.app --api https://smartnews-api.onrender.com
+```
+
+CI integration:
+- `.github/workflows/monitor.yml` runs live frontend route smoke every 2 hours.
 
 ## 4) Regression Watchpoints
 

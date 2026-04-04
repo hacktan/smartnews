@@ -1,0 +1,112 @@
+name: Production Monitor
+
+on:
+  schedule:
+    - cron: "0 */2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  monitor:
+    name: Live API + Frontend Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      API_BASE_URL: https://smartnews-api.onrender.com
+      FRONTEND_BASE_URL: https://frontend-chi-brown-98.vercel.app
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install deps
+        run: uv sync --frozen
+
+      - name: Run API smoke (live)
+        id: api_smoke
+        run: |
+          uv run python tests/smoke_api.py "${API_BASE_URL}" | tee api-smoke.log
+
+      - name: Run frontend smoke (live)
+        id: fe_smoke
+        run: |
+          uv run python tests/smoke_frontend.py "${FRONTEND_BASE_URL}" --api "${API_BASE_URL}" | tee frontend-smoke.log
+
+      - name: Upload monitor logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-monitor-logs
+          path: |
+            api-smoke.log
+            frontend-smoke.log
+
+      - name: Create incident issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const now = new Date().toISOString();
+            const title = '[Monitor] Production smoke failure';
+
+            const apiLog = fs.existsSync('api-smoke.log')
+              ? fs.readFileSync('api-smoke.log', 'utf8').slice(-6000)
+              : '(no api log)';
+            const feLog = fs.existsSync('frontend-smoke.log')
+              ? fs.readFileSync('frontend-smoke.log', 'utf8').slice(-6000)
+              : '(no frontend log)';
+
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'monitor,incident',
+              per_page: 50,
+            });
+
+            const existing = issues.find(i => i.title === title);
+            const body = [
+              `Production monitor failed at ${now}.`,
+              '',
+              '### API smoke tail',
+              '```text',
+              apiLog,
+              '```',
+              '',
+              '### Frontend smoke tail',
+              '```text',
+              feLog,
+              '```',
+              '',
+              `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            ].join('\n');
+
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['monitor', 'incident'],
+              });
+            }
