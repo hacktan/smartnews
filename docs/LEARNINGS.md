@@ -51,6 +51,10 @@ Practical notes and gotchas discovered while operating SmartNews.
 - API now supports startup DB sync (`DB_SYNC_ON_STARTUP`, default `true`) so new deployments refresh `smartnews.duckdb` from `db-latest` automatically.
 - If live API data looks stale while local DB is current, redeploy/restart API service to trigger startup sync.
 - `serve.daily_briefing` write path had a parameter binding bug in projection; fixed by using flat positional params with `con.execute(...)`.
+- Production skew can occur where list endpoint behavior and legacy detail endpoint behavior diverge briefly after rapid successive pushes.
+  - Symptom seen: `/api/stories` looked fixed while `/api/story/<old_id>` still returned pending fallback copy.
+  - Mitigation: verify active schema via `/openapi.json`, then force full service restart/redeploy and recheck both list and detail endpoints with the same story IDs.
+  - Do not trust a single endpoint check when validating rollout of API behavior changes.
 
 ## Validation discipline
 

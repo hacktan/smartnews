@@ -278,6 +278,37 @@ Frontend live smoke results:
 - `200`: `/`, `/briefing`, `/narratives`, `/stories`, `/sources`, `/search?q=ai`
 - No route-level `500` observed in final sweep.
 
+### Iteration H — Multi-source Placeholder Regression + Partial Production Skew (2026-04-04)
+
+User-reported issue:
+- Opening certain multi-source story detail pages showed:
+	- `Summary`
+	- `AI synthesis pending: ...`
+
+Fixes applied (code + data):
+- Removed placeholder fallback row insertion in serving projection.
+- Updated stories list/detail API defaults to hide pending rows unless `include_pending=true`.
+- Added API hard-block for pending placeholder text patterns.
+- Added frontend story detail guard to suppress pending placeholder copy.
+
+Validation commands used:
+
+```bash
+GET /api/stories?limit=20
+GET /api/story/<legacy_pending_story_id>
+GET /api/story/<legacy_pending_story_id>?include_pending=true
+GET /openapi.json
+```
+
+Observed state:
+- `/api/stories?limit=20` shows pending count `0`.
+- `/openapi.json` confirms `include_pending` exists on stories endpoints.
+- Some live checks still returned pending text for a legacy story ID on default detail endpoint, indicating rollout skew/stale instance behavior.
+
+Conclusion:
+- Code-level fix exists and is pushed.
+- Remaining issue is operational deployment consistency on live service, not missing local code changes.
+
 Data presence verification (API):
 - `briefing_count=7`
 - `narratives_count=1`
