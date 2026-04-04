@@ -761,6 +761,73 @@ def main():
             arc_last_title.get(subtopic, ""), updated_at,
         ))
 
+    # Fallback arcs from story clusters to avoid sparse narrative pages when subtopics are too granular.
+    if len(arc_insert) < 6 and cluster_map:
+        # cards_data layout:
+        # [0]entry_id [1]title [2]dehyped [3]source [4]published_at [5]publish_date
+        # [6]category [7]subtopic [8]summary [9]link [10]hype [11]cred [12]importance ...
+        by_cluster: dict[int, list[tuple]] = {}
+        for r in cards_data:
+            cid = int(cluster_map.get(r[0], -1))
+            if cid < 0:
+                continue
+            by_cluster.setdefault(cid, []).append(r)
+
+        existing_arc_ids = {a[0] for a in arc_insert}
+        for cid, members in by_cluster.items():
+            if len(members) < 2:
+                continue
+
+            members = sorted(members, key=lambda m: m[4] or datetime.min)
+
+            arc_id = f"cluster-{cid}"
+            if arc_id in existing_arc_ids:
+                continue
+
+            first_seen = members[0][4]
+            last_seen = members[-1][4]
+            span_days = 0
+            if first_seen and last_seen:
+                span_days = int((last_seen - first_seen).total_seconds() // 86400)
+
+            entry_ids = [m[0] for m in members]
+            titles = [m[1] or "" for m in members]
+            h_start = float(members[0][10] or 0.5)
+            h_end = float(members[-1][10] or 0.5)
+
+            categories = [m[6] for m in members if m[6]]
+            top_category = Counter(categories).most_common(1)[0][0] if categories else "General"
+            label = f"{top_category} Cluster {cid + 1}"
+
+            subtopics = [m[7] for m in members if m[7]]
+            if subtopics:
+                label = Counter(subtopics).most_common(1)[0][0]
+
+            avg_imp = round(sum(float(m[12] or 0.5) for m in members) / len(members), 3)
+            avg_hype = round(sum(float(m[10] or 0.5) for m in members) / len(members), 3)
+            avg_cred = round(sum(float(m[11] or 0.5) for m in members) / len(members), 3)
+
+            arc_insert.append((
+                arc_id,
+                label,
+                top_category,
+                len(members),
+                first_seen,
+                last_seen,
+                span_days,
+                json.dumps(entry_ids),
+                json.dumps(titles),
+                round(h_start, 3),
+                round(h_end, 3),
+                round(h_end - h_start, 3),
+                avg_imp,
+                avg_hype,
+                avg_cred,
+                titles[-1] if titles else "",
+                updated_at,
+            ))
+            existing_arc_ids.add(arc_id)
+
     con.execute("DELETE FROM serve.story_arcs")
     if arc_insert:
         con.executemany("""
@@ -797,6 +864,31 @@ def main():
             FROM gold.compiled_stories cs
             JOIN gold.story_matches sm ON cs.story_id = sm.story_id
             WHERE cs.compiled_title IS NOT NULL
+        """)
+        # Fallback compiled entries from story_matches so Multi-Source page is not empty
+        # when AI compilation is unavailable or too strict.
+        con.execute(f"""
+            INSERT INTO serve.compiled_stories
+            SELECT
+                sm.story_id,
+                sm.canonical_title AS compiled_title,
+                'AI synthesis pending: matched across multiple independent sources.' AS compiled_summary,
+                '' AS compiled_body,
+                sm.source_count,
+                sm.sources AS sources_used,
+                '[]' AS key_claims,
+                '[]' AS consensus_points,
+                '[]' AS divergence_points,
+                sm.entry_ids,
+                sm.category,
+                sm.first_published,
+                sm.last_published,
+                sm.matched_at AS compiled_at,
+                TIMESTAMPTZ '{updated_at.isoformat()}' AS updated_at
+            FROM gold.story_matches sm
+            LEFT JOIN serve.compiled_stories cs ON cs.story_id = sm.story_id
+            WHERE cs.story_id IS NULL
+              AND sm.source_count >= 2
         """)
         cnt_compiled = con.execute("SELECT COUNT(*) FROM serve.compiled_stories").fetchone()[0]
         print(f"compiled_stories: {cnt_compiled} compiled stories written")
