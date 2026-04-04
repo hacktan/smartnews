@@ -119,11 +119,13 @@ Automated path:
 
 ```bash
 uv run python tests/smoke_frontend.py https://frontend-chi-brown-98.vercel.app --api https://smartnews-api.onrender.com
+uv run python tests/live_data_quality.py https://smartnews-api.onrender.com
 ```
 
 CI integration:
 - `.github/workflows/monitor.yml` runs live frontend route smoke every 2 hours.
 - `.github/workflows/user_journey_monitor.yml` runs Playwright-based live user journey every 6 hours.
+- `.github/workflows/monitor.yml` also runs live data-quality anomaly checks.
 
 User-journey validation (browser-level):
 

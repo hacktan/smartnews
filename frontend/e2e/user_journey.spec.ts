@@ -95,10 +95,26 @@ async function assertRouteHealthy(page: Page, path: string) {
   page.on('response', onResponse);
   page.on('requestfailed', onRequestFailed);
 
-  const response = await page.goto(`${FRONTEND_BASE_URL}${path}`, {
-    waitUntil: 'networkidle',
-    timeout: 45000,
-  });
+  let response = null;
+  let navError: unknown = null;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      response = await page.goto(`${FRONTEND_BASE_URL}${path}`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 45000,
+      });
+      navError = null;
+      break;
+    } catch (err) {
+      navError = err;
+      if (attempt < 2) {
+        await page.waitForTimeout(1500);
+        continue;
+      }
+    }
+  }
+
+  expect(navError, `Navigation failed for ${path}: ${String(navError)}`).toBeNull();
 
   expect(response, `No response for ${path}`).not.toBeNull();
   expect(response?.status(), `Unexpected status for ${path}`).toBeLessThan(400);

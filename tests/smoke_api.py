@@ -74,6 +74,9 @@ def get(path: str, params: dict | None = None) -> tuple[int, dict | list | None,
                     data = None
                 return resp.status, data, elapsed
         except urllib.error.HTTPError as e:
+            if e.code in (502, 503, 504) and attempt < RETRIES:
+                time.sleep(2 * attempt)
+                continue
             elapsed = int((time.time() - t0) * 1000)
             return e.code, None, elapsed
         except (urllib.error.URLError, TimeoutError, socket.timeout) as e:

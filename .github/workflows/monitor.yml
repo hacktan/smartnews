@@ -49,6 +49,11 @@ jobs:
         run: |
           uv run python tests/smoke_frontend.py "${FRONTEND_BASE_URL}" --api "${API_BASE_URL}" | tee frontend-smoke.log
 
+      - name: Run live data-quality checks
+        id: data_quality
+        run: |
+          uv run python tests/live_data_quality.py "${API_BASE_URL}" | tee data-quality.log
+
       - name: Upload monitor logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -58,6 +63,7 @@ jobs:
             api-smoke.log
             api-contract.log
             frontend-smoke.log
+            data-quality.log
 
       - name: Create incident issue on failure
         if: failure()
@@ -77,6 +83,9 @@ jobs:
             const contractLog = fs.existsSync('api-contract.log')
               ? fs.readFileSync('api-contract.log', 'utf8').slice(-6000)
               : '(no contract log)';
+            const qualityLog = fs.existsSync('data-quality.log')
+              ? fs.readFileSync('data-quality.log', 'utf8').slice(-6000)
+              : '(no data-quality log)';
 
             const { data: issues } = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
@@ -103,6 +112,11 @@ jobs:
               '### API contract tail',
               '```text',
               contractLog,
+              '```',
+              '',
+              '### Data quality tail',
+              '```text',
+              qualityLog,
               '```',
               '',
               `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,

@@ -29,6 +29,7 @@ Live snapshot (2026-04-04, post Iteration J):
   - `tests/smoke_api.py`: self-bootstrapping API smoke suite with dynamic ID discovery.
   - `tests/contract_api.py`: strict response-key contract checks for critical endpoints.
   - `tests/smoke_frontend.py`: frontend route smoke suite (dynamic route coverage).
+  - `tests/live_data_quality.py`: anomaly checks for subtle live regressions (duplicates/placeholders/default scores/staleness).
   - `.github/workflows/quality_gate.yml`: push/PR guardrail (backend local smoke + frontend lint/build).
   - `.github/workflows/monitor.yml`: production smoke monitor every 2 hours with incident issue auto-open/update.
   - `.github/workflows/user_journey_monitor.yml`: Playwright live user-journey monitor every 6 hours.

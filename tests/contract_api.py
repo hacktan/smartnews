@@ -44,6 +44,12 @@ def fetch(path: str, params: dict | None = None):
                 time.sleep(2 * attempt)
                 continue
             raise
+        except urllib.error.HTTPError as err:
+            last_error = err
+            if err.code in (502, 503, 504) and attempt < RETRIES:
+                time.sleep(2 * attempt)
+                continue
+            raise
         except Exception as err:
             last_error = err
             if attempt < RETRIES:

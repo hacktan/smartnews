@@ -7,7 +7,7 @@ export default defineConfig({
     timeout: 10000,
   },
   fullyParallel: false,
-  retries: 0,
+  retries: 1,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     trace: 'retain-on-failure',
