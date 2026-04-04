@@ -35,6 +35,7 @@ load_dotenv()
 DB_PATH = os.getenv("DB_PATH", str(Path(__file__).parent.parent / "smartnews.duckdb"))
 LOOKBACK_DAYS = 30
 MIN_FULLTEXT_CHARS = 300
+MIN_SUMMARY_CHARS = 120
 
 
 def cosine_dense(v1: list, v2: list) -> float:
@@ -284,8 +285,10 @@ def main():
         WHERE publish_date >= current_date - INTERVAL '{LOOKBACK_DAYS} days'
           AND title IS NOT NULL
           AND TRIM(title) != ''
-          AND has_full_text = TRUE
-          AND COALESCE(LENGTH(full_text), 0) >= {MIN_FULLTEXT_CHARS}
+                    AND (
+                                (has_full_text = TRUE AND COALESCE(LENGTH(full_text), 0) >= {MIN_FULLTEXT_CHARS})
+                                OR COALESCE(LENGTH(clean_summary), 0) >= {MIN_SUMMARY_CHARS}
+                            )
     """).fetchall()
 
     gold_count = len(gold_rows)
@@ -304,8 +307,10 @@ def main():
         WHERE publish_date >= current_date - INTERVAL '{LOOKBACK_DAYS} days'
           AND title IS NOT NULL
           AND TRIM(title) != ''
-          AND has_full_text = TRUE
-          AND COALESCE(LENGTH(full_text), 0) >= {MIN_FULLTEXT_CHARS}
+                    AND (
+                                (has_full_text = TRUE AND COALESCE(LENGTH(full_text), 0) >= {MIN_FULLTEXT_CHARS})
+                                OR COALESCE(LENGTH(clean_summary), 0) >= {MIN_SUMMARY_CHARS}
+                            )
     """)
 
     updated_at = datetime.now(timezone.utc)

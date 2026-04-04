@@ -181,6 +181,23 @@ def main():
           AND NOT EXISTS (SELECT 1 FROM gold.news_articles g WHERE g.entry_id = s.entry_id)
     """)
 
+    # Sync mutable descriptive fields from silver for existing articles.
+    # This keeps category taxonomy and summaries current when classification rules evolve.
+    con.execute("""
+        UPDATE gold.news_articles AS g
+        SET
+            title                   = s.title,
+            clean_summary           = s.clean_summary,
+            category                = s.category,
+            tags                    = s.tags,
+            author                  = s.author,
+            estimated_read_time_min = s.estimated_read_time_min,
+            image_url               = COALESCE(g.image_url, s.image_url),
+            updated_at              = NOW()
+        FROM silver.rss_cleaned s
+        WHERE g.entry_id = s.entry_id
+    """)
+
     # Full-text backfill — update gold rows that were inserted without full_text
     # but where silver now has it (e.g. scraping ran after gold ingestion).
     con.execute("""
