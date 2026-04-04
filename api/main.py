@@ -12,6 +12,7 @@ Note: this file may receive no-op commits to force Render redeploy when DB relea
 Deploy marker: 2026-04-04 source-expansion refresh.
 Deploy marker: 2026-04-04 broad-news expansion refresh.
 Deploy marker: 2026-04-04 story-matching expansion refresh.
+Deploy marker: 2026-04-04 compiled-quality restore refresh.
 """
 import logging
 import os

@@ -20,14 +20,15 @@ _detail_cache: TTLCache = TTLCache(maxsize=50, ttl=300)
 
 
 @router.get("/stories", response_model=CompiledStoriesResponse)
-def list_compiled_stories(limit: int = 20):
+def list_compiled_stories(limit: int = 20, include_pending: bool = False):
     """Return compiled multi-source stories, newest first."""
-    cache_key = f"list_{limit}"
+    cache_key = f"list_{limit}:{include_pending}"
     if cache_key in _list_cache:
         return _list_cache[cache_key]
 
     safe_limit = max(1, min(limit, 50))
 
+    body_filter = "" if include_pending else "AND COALESCE(LENGTH(compiled_body), 0) >= 300"
     rows = query(
         f"""
         SELECT
@@ -43,6 +44,7 @@ def list_compiled_stories(limit: int = 20):
             entry_ids
         FROM serve.compiled_stories
         WHERE compiled_title IS NOT NULL
+          {body_filter}
         ORDER BY last_published DESC
         LIMIT {safe_limit}
         """
@@ -50,8 +52,8 @@ def list_compiled_stories(limit: int = 20):
 
     items = [CompiledStory(**r) for r in rows]
 
-    # Fallback: when AI compilation volume is low, still surface multi-source story groups.
-    if len(items) < safe_limit:
+    # Optional fallback: expose pending multi-source matches only when explicitly requested.
+    if include_pending and len(items) < safe_limit:
         fallback_rows = query(
             f"""
             SELECT

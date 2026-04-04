@@ -874,31 +874,6 @@ def main():
             JOIN gold.story_matches sm ON cs.story_id = sm.story_id
             WHERE cs.compiled_title IS NOT NULL
         """)
-        # Fallback compiled entries from story_matches so Multi-Source page is not empty
-        # when AI compilation is unavailable or too strict.
-        con.execute(f"""
-            INSERT INTO serve.compiled_stories
-            SELECT
-                sm.story_id,
-                sm.canonical_title AS compiled_title,
-                'AI synthesis pending: matched across multiple independent sources.' AS compiled_summary,
-                '' AS compiled_body,
-                sm.source_count,
-                sm.sources AS sources_used,
-                '[]' AS key_claims,
-                '[]' AS consensus_points,
-                '[]' AS divergence_points,
-                sm.entry_ids,
-                sm.category,
-                sm.first_published,
-                sm.last_published,
-                sm.matched_at AS compiled_at,
-                TIMESTAMPTZ '{updated_at.isoformat()}' AS updated_at
-            FROM gold.story_matches sm
-            LEFT JOIN serve.compiled_stories cs ON cs.story_id = sm.story_id
-            WHERE cs.story_id IS NULL
-              AND sm.source_count >= 2
-        """)
         cnt_compiled = con.execute("SELECT COUNT(*) FROM serve.compiled_stories").fetchone()[0]
         print(f"compiled_stories: {cnt_compiled} compiled stories written")
     except Exception as e:
