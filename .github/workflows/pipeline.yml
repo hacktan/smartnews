@@ -53,6 +53,8 @@ jobs:
       OPENAI_EMBEDDING_MODEL: text-embedding-3-small
       LOCAL_OPENAI_BASE_URL: ${{ github.event.inputs.local_openai_base_url || 'http://127.0.0.1:11434/v1' }}
       LOCAL_OPENAI_API_KEY: ollama
+      CLAIM_LLM_PROVIDER: ${{ github.event.inputs.llm_provider || 'local' }}
+      CLAIM_MODEL: ${{ github.event.inputs.llm_provider == 'openai' && 'gpt-4o-mini' || 'qwen2.5:7b-instruct' }}
       ENRICHMENT_BATCH_LIMIT: "50"
       SCRAPE_BATCH_LIMIT: "100"
 
