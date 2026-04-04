@@ -131,6 +131,9 @@ export default async function StoryDetailPage({ params }: Props) {
   const keyClaims = parseKeyClaims(story.key_claims);
   const consensusPoints = parseJsonList(story.consensus_points);
   const divergencePoints = parseJsonList(story.divergence_points);
+  const hasPendingSummary = (story.compiled_summary ?? "").startsWith("AI synthesis pending")
+    || (story.compiled_summary ?? "").startsWith("AI full synthesis is pending");
+  const hasPendingBody = (story.compiled_body ?? "").startsWith("This story has been matched across multiple sources");
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -169,15 +172,24 @@ export default async function StoryDetailPage({ params }: Props) {
       </header>
 
       {/* Summary */}
-      {story.compiled_summary && (
+      {story.compiled_summary && !hasPendingSummary && (
         <div className="mb-6 rounded-xl bg-blue-50 border border-blue-100 p-5">
           <p className="text-sm font-semibold text-blue-800 uppercase tracking-wide mb-2">Summary</p>
           <p className="text-base text-gray-800 leading-relaxed">{story.compiled_summary}</p>
         </div>
       )}
 
+      {hasPendingSummary && (
+        <div className="mb-6 rounded-xl bg-amber-50 border border-amber-200 p-5">
+          <p className="text-sm font-semibold text-amber-800 uppercase tracking-wide mb-2">Synthesis in progress</p>
+          <p className="text-sm text-gray-700 leading-relaxed">
+            This story match is new. Full synthesis and claim verification will appear after the next enrichment cycle.
+          </p>
+        </div>
+      )}
+
       {/* Full compiled body */}
-      {story.compiled_body && (
+      {story.compiled_body && !hasPendingBody && (
         <article className="mb-8 prose prose-gray max-w-none">
           <div className="text-gray-800 leading-relaxed whitespace-pre-wrap text-[15px]">
             {story.compiled_body}
