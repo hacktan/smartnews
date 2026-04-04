@@ -345,13 +345,16 @@ Rules:
                 reverse=True,
             )
 
-            fulltext_articles = [a for a in source_articles if a[3] and len(a[3]) >= 400]
-            if len(fulltext_articles) < MIN_FULLTEXT_SOURCES:
+            usable_articles = [
+                a for a in source_articles
+                if (a[3] and len(a[3]) >= 200) or (a[2] and len(a[2]) >= 50)
+            ]
+            if len(usable_articles) < 2:
                 skipped_low_fulltext += 1
-                print(f"  Skipping {story_id[:10]}... insufficient full-text sources ({len(fulltext_articles)})")
+                print(f"  Skipping {story_id[:10]}... insufficient usable text sources ({len(usable_articles)})")
                 continue
 
-            selected = source_articles[:COMPILATION_MAX_SOURCES]
+            selected = usable_articles[:COMPILATION_MAX_SOURCES]
 
             source_texts = []
             for idx, art in enumerate(selected, 1):
