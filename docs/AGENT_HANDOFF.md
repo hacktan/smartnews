@@ -183,3 +183,12 @@ Execution boundary (critical):
 - Production Monitor latest manual verification: https://github.com/hacktan/smartnews/actions/runs/23981916386 (pass)
 - User Journey Monitor (Playwright) latest manual verification: https://github.com/hacktan/smartnews/actions/runs/23981916378 (pass)
 - API contract checks are now enforced in both Quality Gate and Production Monitor.
+
+## 12) Latest Stability Loop (2026-04-04)
+
+- `/sources` production route recovered and now returns 200 reliably.
+- Live anomaly checks are integrated into monitor pipeline (`tests/live_data_quality.py`).
+- Latest full automation verification set:
+  - Quality Gate: https://github.com/hacktan/smartnews/actions/runs/23982630526 (pass)
+  - Production Monitor: https://github.com/hacktan/smartnews/actions/runs/23982630534 (pass)
+  - User Journey Monitor: https://github.com/hacktan/smartnews/actions/runs/23982630542 (pass)

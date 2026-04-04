@@ -456,3 +456,17 @@ Validation runs:
 Operational outcome:
 - Fast gate is now deterministic and passing.
 - Live API + frontend + contract + browser-journey checks all pass in automation.
+
+### Iteration L - Live Anomaly Guard + Sources Resilience (2026-04-04)
+
+What changed:
+- Added `tests/live_data_quality.py` to detect subtle regressions in production payload quality.
+- `monitor.yml` now runs API smoke + API contract + frontend smoke + live data-quality checks.
+- `tests/smoke_api.py` and `tests/contract_api.py` now retry transient 5xx/network failures.
+- Browser journey now has navigation retry and desktop+mobile coverage.
+- `/sources` page moved to resilient client fetch mode so route stays available even during API instability.
+
+Latest validation runs:
+- Quality Gate: https://github.com/hacktan/smartnews/actions/runs/23982630526 (pass)
+- Production Monitor: https://github.com/hacktan/smartnews/actions/runs/23982630534 (pass)
+- User Journey Monitor: https://github.com/hacktan/smartnews/actions/runs/23982630542 (pass)
