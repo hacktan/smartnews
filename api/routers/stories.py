@@ -103,8 +103,10 @@ def get_compiled_story(story_id: str, include_pending: bool = False):
     if cache_key in _detail_cache:
         return _detail_cache[cache_key]
 
+    detail_body_filter = "" if include_pending else "AND COALESCE(LENGTH(compiled_body), 0) >= 300"
+
     rows = query(
-        """
+        f"""
         SELECT
             story_id,
             compiled_title,
@@ -122,8 +124,9 @@ def get_compiled_story(story_id: str, include_pending: bool = False):
             divergence_points
         FROM serve.compiled_stories
         WHERE story_id = ?
+                    {detail_body_filter}
         LIMIT 1
-        """,
+                """,
         params=(story_id,),
     )
 
