@@ -65,6 +65,7 @@ Practical notes and gotchas discovered while operating SmartNews.
 - Multi-source surfaces (`/stories`, `/narratives`, `/briefing`) need explicit no-data states because data can legitimately be missing between pipeline runs.
 - For server components, every optional API segment should be guarded (`Array.isArray`, null-safe fallbacks) to prevent full-page render failures.
 - `404` from `/api/briefing/daily` is a normal operational state when no briefing has been generated yet; frontend should treat it as a friendly empty state, not an error page.
+- Source leaderboard pages should avoid brittle keys (`source_name` can be null/missing in edge payloads); use safe fallback keys/labels.
 
 ## Documentation discipline
 

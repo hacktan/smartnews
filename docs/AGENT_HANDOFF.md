@@ -108,6 +108,7 @@ Execution boundary (critical):
   - After forced API redeploy, live endpoints confirmed refreshed data:
     - `/api/briefing/daily` -> 200 (`article_count=7`)
     - `/api/stories?limit=3` -> `stories_count=1`
+  - Frontend regression sweep passed on key routes: `/`, `/briefing`, `/narratives`, `/stories`, `/sources`, `/search?q=ai`.
 
 ## 6) First Tasks For Next Agent (Priority)
 

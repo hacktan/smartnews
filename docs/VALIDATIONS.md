@@ -259,3 +259,23 @@ Post-redeploy live checks:
 
 Conclusion:
 - Local Llama-enriched outputs are now visible in live API through refreshed `db-latest` sync.
+
+### Iteration G — Frontend Route Regression Sweep (2026-04-04)
+
+Scope:
+- User-requested comprehensive route checks across homepage and key feature pages.
+
+Fix applied:
+- `frontend/app/sources/page.tsx` hardened against malformed/null leaderboard rows.
+
+Frontend live smoke results:
+- `200`: `/`, `/briefing`, `/narratives`, `/stories`, `/sources`, `/search?q=ai`
+- No route-level `500` observed in final sweep.
+
+Data presence verification (API):
+- `briefing_count=7`
+- `narratives_count=1`
+- `stories_count=1`
+
+Conclusion:
+- Narrative, Briefing, and Multi-source surfaces are now populated and reachable in production.
