@@ -108,7 +108,7 @@ async function assertRouteHealthy(page: Page, path: string) {
     } catch (err) {
       navError = err;
       if (attempt < 2) {
-        await page.waitForTimeout(1500);
+        await new Promise((resolve) => setTimeout(resolve, 1500));
         continue;
       }
     }
