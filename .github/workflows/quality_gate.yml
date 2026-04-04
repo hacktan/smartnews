@@ -30,6 +30,9 @@ jobs:
       - name: Install deps
         run: uv sync --frozen
 
+      - name: Install runtime server
+        run: uv pip install uvicorn
+
       - name: Download DB snapshot
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
