@@ -40,6 +40,10 @@ jobs:
     runs-on: ${{ github.event.inputs.runner || 'self-hosted' }}
     timeout-minutes: 60
 
+    defaults:
+      run:
+        shell: bash
+
     env:
       DB_PATH: smartnews.duckdb
       AI_LLM_PROVIDER: ${{ github.event.inputs.llm_provider || 'local' }}
