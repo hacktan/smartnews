@@ -34,7 +34,7 @@ jobs:
         env:
           DB_SYNC_ON_STARTUP: "true"
         run: |
-          nohup uv run uvicorn api.main:app --host 127.0.0.1 --port 8000 > api.log 2>&1 &
+          nohup uv run python -m uvicorn api.main:app --host 127.0.0.1 --port 8000 > api.log 2>&1 &
 
       - name: Wait for health
         run: |
