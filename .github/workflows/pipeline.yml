@@ -27,6 +27,9 @@ on:
         required: false
         default: "false"
 
+permissions:
+  contents: write
+
 concurrency:
   group: pipeline
   cancel-in-progress: false  # never cancel a running pipeline mid-run
