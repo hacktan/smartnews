@@ -26,6 +26,11 @@ Practical notes and gotchas discovered while operating SmartNews.
 
 - `pipeline/04b_claim_extraction.py` supports `CLAIM_LLM_PROVIDER=local` with OpenAI-compatible local servers.
 - Good default for 8GB VRAM: `qwen2.5:7b-instruct` (via Ollama).
+- Scope clarification:
+  - Works when pipeline runs on your own machine (where Ollama is running).
+  - Does NOT work on GitHub-hosted Actions runners with `LOCAL_OPENAI_BASE_URL=http://127.0.0.1:11434/v1`.
+  - Does NOT work for remote agents that cannot access your local network/processes.
+  - For CI usage, use either `OPENAI_API_KEY` or a publicly reachable/self-hosted LLM endpoint.
 - Recommended env for local mode:
   - `CLAIM_LLM_PROVIDER=local`
   - `CLAIM_MODEL=qwen2.5:7b-instruct`

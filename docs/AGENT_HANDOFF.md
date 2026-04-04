@@ -74,6 +74,11 @@ Then run:
 uv run python pipeline/04b_claim_extraction.py
 ```
 
+Execution boundary (critical):
+- Local Ollama mode works only when this command runs on the same machine as Ollama.
+- GitHub-hosted Actions and remote agents cannot use your local `127.0.0.1` endpoint.
+- For CI/remote runs, provide `OPENAI_API_KEY` or a reachable hosted/self-hosted LLM API endpoint.
+
 ## 5) Known Risks / Open Items
 
 - User reported frontend quality regressions (blank titles in Top Stories, some pages still showing RSS-like summaries instead of full-text-backed content).

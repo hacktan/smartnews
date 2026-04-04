@@ -48,6 +48,11 @@ Then run only claim step:
 uv run python pipeline/04b_claim_extraction.py
 ```
 
+Important:
+- This local mode is for local runs only.
+- GitHub-hosted Actions and remote agents cannot reach your local `127.0.0.1:11434`.
+- If CI/remote execution is required, use `OPENAI_API_KEY` or expose a reachable LLM endpoint.
+
 Pass criteria:
 - Script runs without `OPENAI_API_KEY`.
 - `gold.article_claims` row count increases (if pending matched stories exist).
