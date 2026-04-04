@@ -4,7 +4,7 @@
 > **To**: GitHub Actions + DuckDB + Vercel + Render.com (`hacktan/smartnews`)
 >
 > Created: 2026-04-04
-> Status: IN PROGRESS — codebase copied, transformation pending
+> Status: HISTORICAL PLAN — migration completed; repo now operates on GitHub Actions + DuckDB + Render + Vercel
 
 ---
 

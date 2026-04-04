@@ -2,6 +2,12 @@
 
 This file is the operational checklist for validating SmartNews after code or pipeline changes.
 
+## Current Snapshot (2026-04-04)
+
+- Latest documented production state is reflected in `docs/AGENT_HANDOFF.md`.
+- Narrative, Briefing, and Multi-source pages were validated as populated during Iterations E-G.
+- Archive plans under `docs/archive/` are historical references and may not represent current live status.
+
 ## 1) Data Pipeline Validation
 
 Run full pipeline locally in this exact order:

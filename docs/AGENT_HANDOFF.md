@@ -1,7 +1,7 @@
 # SmartNews - Agent Handoff
 
 > Canonical handoff doc for the next agent.
-> Last updated: 2026-04-04
+> Last updated: 2026-04-04 (post Iteration G)
 > Repo: hacktan/smartnews
 > Local path: c:\Users\haktan\Documents\SmartNews
 
@@ -81,17 +81,11 @@ Execution boundary (critical):
 
 ## 5) Known Risks / Open Items
 
-- User reported frontend quality regressions (blank titles in Top Stories, some pages still showing RSS-like summaries instead of full-text-backed content).
-- Need another end-to-end product validation pass after latest pipeline run:
-  - pipeline validation
-  - API smoke
-  - frontend smoke on live routes
-- `docs/PRODUCT_VALIDATIONS.md` is legacy/stale (contains old Databricks-era checks). Keep for reference only or archive/update.
-- Live API currently returns:
-  - `/api/briefing/daily` => `404` (no latest briefing row)
-  - `/api/narratives?limit=1` => `items: []`
-  - `/api/stories?limit=1` => `items: []`
-  This is the main reason for currently sparse/empty multi-source pages.
+- `docs/PRODUCT_VALIDATIONS.md` is legacy/stale (Databricks-era checks). Keep as archive/reference only.
+- Enrichment in GitHub-hosted CI still depends on available OpenAI credentials.
+  - If `OPENAI_API_KEY` is absent, enrichment/claim/compilation steps are skipped by design.
+  - Local Llama mode requires local/self-hosted execution boundary and is not usable from GitHub-hosted runners.
+- Render free-tier cold starts and transient 502/connection-closed responses can still occur.
 - Recent workflow failure root cause (run `23968498060`): `OPENAI_API_KEY` missing during `04_ai_enrichment.py`.
 - Fix applied:
   - `pipeline/04_ai_enrichment.py` now supports `AI_LLM_PROVIDER=local` (OpenAI-compatible endpoint).
@@ -112,12 +106,12 @@ Execution boundary (critical):
 
 ## 6) First Tasks For Next Agent (Priority)
 
-1. Run fresh pipeline (or trigger workflow) and verify `pipeline/validate.py` passes.
-2. Confirm `serve.daily_briefing`, `serve.story_arcs`, `serve.compiled_stories` receive non-empty rows.
-3. Re-run live API smoke checks and capture counts, not just status codes.
-4. Inspect live multi-source routes (`/briefing`, `/narratives`, `/stories`) for data-populated rendering.
-5. If data is still missing, patch generation steps in `pipeline/03b_story_matching.py`, `pipeline/04_ai_enrichment.py`, and `pipeline/05_serving_projection.py`.
-6. If live API still shows stale data after DB release update, force API restart/redeploy so startup DB sync pulls latest `db-latest` asset.
+1. Keep a rolling validation cadence (pipeline + API + frontend smoke) and append results to `docs/VALIDATIONS.md`.
+2. Stabilize CI enrichment path:
+   - either configure reliable OpenAI key usage,
+   - or move enrichment-capable runs to self-hosted execution with reachable local/hosted LLM endpoint.
+3. Add strict content-level post-run gates (`serve.daily_briefing`, `serve.story_arcs`, `serve.compiled_stories` non-empty thresholds).
+4. Keep API redeploy/sync runbook handy for stale DB incidents and log each incident in `docs/LEARNINGS.md`.
 
 ## 7) Important File Map
 
@@ -141,4 +135,4 @@ Execution boundary (critical):
 - [x] Repo is on `main`
 - [x] Handoff doc updated to current production state
 - [x] Click-tracker fallback API URL updated to Render
-- [ ] Next agent to run full live validation pass and document outcomes
+- [x] Live validation pass completed and documented (see `docs/VALIDATIONS.md` Iterations A-G)

@@ -1,6 +1,6 @@
 # Layer 8 — Multi-Source Full-Text Scraping + AI Content Compilation
 
-> **STATUS**: PLAN APPROVED — Implementation not started
+> **STATUS**: HISTORICAL PLAN — Core implementation completed (see docs/AGENT_HANDOFF.md and docs/VALIDATIONS.md)
 > **Created**: 2026-03-09
 > **Purpose**: Upgrade SmartNews from 3-source RSS summaries to 20+ source full-text scraping with cross-source story matching and AI-compiled "best version" articles.
 
