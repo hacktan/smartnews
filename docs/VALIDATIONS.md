@@ -121,6 +121,21 @@ uv run python tests/smoke_frontend.py https://frontend-chi-brown-98.vercel.app -
 
 CI integration:
 - `.github/workflows/monitor.yml` runs live frontend route smoke every 2 hours.
+- `.github/workflows/user_journey_monitor.yml` runs Playwright-based live user journey every 6 hours.
+
+User-journey validation (browser-level):
+
+```bash
+cd frontend
+npm ci
+npx playwright install --with-deps chromium
+FRONTEND_BASE_URL=https://frontend-chi-brown-98.vercel.app API_BASE_URL=https://smartnews-api.onrender.com npm run test:e2e
+```
+
+Pass criteria:
+- Critical routes render without runtime JS errors.
+- No console `error` events.
+- No frontend 5xx responses during navigation.
 
 ## 4) Regression Watchpoints
 

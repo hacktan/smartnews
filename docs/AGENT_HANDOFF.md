@@ -30,6 +30,8 @@ Live snapshot (2026-04-04, post Iteration J):
   - `tests/smoke_frontend.py`: frontend route smoke suite (dynamic route coverage).
   - `.github/workflows/quality_gate.yml`: push/PR guardrail (backend local smoke + frontend lint/build).
   - `.github/workflows/monitor.yml`: production smoke monitor every 2 hours with incident issue auto-open/update.
+  - `.github/workflows/user_journey_monitor.yml`: Playwright live user-journey monitor every 6 hours.
+  - `frontend/e2e/user_journey.spec.ts`: browser-level flow that catches runtime/console/network errors.
   - `docs/ROADMAP.md`: agent-executable roadmap with task cards, boundaries, and validation/rollback templates.
 - DuckDB migration is complete (pipeline + API).
 - Claim extraction pipeline exists: `pipeline/04b_claim_extraction.py`.
@@ -149,6 +151,8 @@ Execution boundary (critical):
 - Frontend smoke tests: `tests/smoke_frontend.py`
 - Quality gate workflow: `.github/workflows/quality_gate.yml`
 - Production monitor workflow: `.github/workflows/monitor.yml`
+- User-journey monitor workflow: `.github/workflows/user_journey_monitor.yml`
+- Browser E2E tests: `frontend/e2e/`
 - Strategic roadmap: `docs/ROADMAP.md`
 - Claim extraction: `pipeline/04b_claim_extraction.py`
 - Serving projection: `pipeline/05_serving_projection.py`
