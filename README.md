@@ -1,32 +1,33 @@
-# SmartNews — AI-Enriched Tech News Platform
+﻿# SmartNews - AI-Enriched Tech News Platform
 
-High-signal, claim-verified news discovery platform. Ingests RSS feeds, enriches articles
-with AI scores (hype, credibility, importance, freshness), cross-matches stories across sources,
-and serves them through a structured web UI.
+High-signal, claim-verified tech news platform. Ingests RSS feeds, enriches articles
+with AI scores (hype, credibility, importance, freshness), groups related stories across
+sources, and serves them through API + web UI.
 
-**Tagline**: "News that checks its claims"
+Tagline: "News that checks its claims"
 
 ## Quick Links
 
-- **[docs/AGENT_HANDOFF.md](docs/AGENT_HANDOFF.md)** — Full project state, phase status, run order (start here)
-- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — Technical architecture deep-dive
-- **[docs/PRODUCT_GOALS.md](docs/PRODUCT_GOALS.md)** — Product roadmap and layer progress
+- [docs/AGENT_HANDOFF.md](docs/AGENT_HANDOFF.md) - Full project state and runbook
+- [docs/README.md](docs/README.md) - Documentation index (active vs archived)
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - Technical architecture details
+- [docs/PRODUCT_GOALS.md](docs/PRODUCT_GOALS.md) - Product roadmap
 
 ## Stack
 
 | Layer | Technology | Status |
-|-------|-----------|--------|
+|-------|------------|--------|
 | Pipeline runner | GitHub Actions cron | Live |
-| Database | DuckDB (single file, persisted via GitHub Releases) | Live |
+| Database | DuckDB (single file persisted via GitHub Releases) | Live |
 | AI enrichment | OpenAI gpt-4o-mini + text-embedding-3-small | Live |
-| API | FastAPI + Python 3.11 | In progress (Phase 3 code migrated to DuckDB) |
-| Frontend | Next.js 16 (App Router), TypeScript, Tailwind | Pending (Phase 4) |
-| API hosting | Render.com | In progress (use `render.yaml`) |
-| Frontend hosting | Vercel | Pending (Phase 4) |
+| API | FastAPI + Python 3.11 | Live |
+| Frontend | Next.js 16 (App Router), TypeScript, Tailwind | Live |
+| API hosting | Render.com | Live |
+| Frontend hosting | Vercel | Live |
 
 ## Data Flow
 
-```
+```text
 RSS Feeds
     |
     v
@@ -66,7 +67,7 @@ Automated via `.github/workflows/pipeline.yml` (every 6 hours).
 ```bash
 git clone https://github.com/hacktan/smartnews
 cd smartnews
-cp .env.example .env   # fill in OPENAI_API_KEY
+cp .env.example .env   # fill OPENAI_API_KEY
 uv sync
 ```
 
@@ -74,14 +75,14 @@ uv sync
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `OPENAI_API_KEY` | Yes | OpenAI API key |
-| `DB_PATH` | No | Path to DuckDB file (default: `smartnews.duckdb`) |
-| `OPENAI_MODEL` | No | Chat model (default: `gpt-4o-mini`) |
-| `ENRICHMENT_BATCH_LIMIT` | No | Max articles per enrichment run (default: `50`) |
-| `GITHUB_TOKEN` | API deploy (optional) | Recommended for private repos or avoiding GitHub rate limits |
-| `GITHUB_REPOSITORY` | API deploy | Repo slug for release download (default: `hacktan/smartnews`) |
-| `GITHUB_RELEASE_TAG` | API deploy | Release tag used for DB lookup (default: `db-latest`) |
-| `GITHUB_DB_ASSET_NAME` | API deploy | DB asset name in release (default: `smartnews.duckdb`) |
+| OPENAI_API_KEY | Yes | OpenAI API key |
+| DB_PATH | No | DuckDB path (default: smartnews.duckdb) |
+| OPENAI_MODEL | No | Chat model (default: gpt-4o-mini) |
+| ENRICHMENT_BATCH_LIMIT | No | Max articles per enrichment run (default: 50) |
+| GITHUB_TOKEN | API deploy optional | Recommended for private repos or rate-limit safety |
+| GITHUB_REPOSITORY | API deploy | Repo slug (default: hacktan/smartnews) |
+| GITHUB_RELEASE_TAG | API deploy | Release tag for DB lookup (default: db-latest) |
+| GITHUB_DB_ASSET_NAME | API deploy | DB asset filename (default: smartnews.duckdb) |
 
 ## API Deploy (Render)
 

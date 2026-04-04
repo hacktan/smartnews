@@ -20,7 +20,7 @@ export default function Footer() {
               <span className="text-gray-900">News</span>
             </span>
             <p className="mt-0.5 text-xs text-gray-400">
-              AI-curated tech news · Azure Databricks + GPT-4o-mini
+              AI-curated tech news · DuckDB pipeline + GPT-4o-mini
             </p>
           </div>
 
@@ -40,7 +40,7 @@ export default function Footer() {
           {/* Meta */}
           <div className="text-xs text-gray-400 text-center sm:text-right">
             <a
-              href="https://github.com/hacktan/SmartNews-Pipeline"
+              href="https://github.com/hacktan/smartnews"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-blue-600 transition-colors"

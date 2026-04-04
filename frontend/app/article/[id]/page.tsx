@@ -82,10 +82,6 @@ export default async function ArticlePage({ params }: Props) {
             alt=""
             className="w-full object-cover"
             style={{ maxHeight: 400 }}
-            onError={(e) => {
-              const p = (e.target as HTMLImageElement).parentElement;
-              if (p) p.style.display = "none";
-            }}
           />
         </div>
       )}
