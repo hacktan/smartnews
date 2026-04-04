@@ -19,6 +19,16 @@ _list_cache: TTLCache = TTLCache(maxsize=1, ttl=300)
 _detail_cache: TTLCache = TTLCache(maxsize=50, ttl=300)
 
 
+def _is_pending_placeholder(summary: str | None, body: str | None) -> bool:
+    s = (summary or "").strip().lower()
+    b = (body or "").strip().lower()
+    return (
+        s.startswith("ai synthesis pending")
+        or s.startswith("ai full synthesis is pending")
+        or b.startswith("this story has been matched across multiple sources")
+    )
+
+
 @router.get("/stories", response_model=CompiledStoriesResponse)
 def list_compiled_stories(limit: int = 20, include_pending: bool = False):
     """Return compiled multi-source stories, newest first."""
@@ -50,7 +60,11 @@ def list_compiled_stories(limit: int = 20, include_pending: bool = False):
         """
     )
 
-    items = [CompiledStory(**r) for r in rows]
+    items = [
+        CompiledStory(**r)
+        for r in rows
+        if include_pending or not _is_pending_placeholder(r.get("compiled_summary"), None)
+    ]
 
     # Optional fallback: expose pending multi-source matches only when explicitly requested.
     if include_pending and len(items) < safe_limit:
@@ -226,6 +240,9 @@ def get_compiled_story(story_id: str, include_pending: bool = False):
         return detail
 
     row = rows[0]
+    if not include_pending and _is_pending_placeholder(row.get("compiled_summary"), row.get("compiled_body")):
+        raise HTTPException(status_code=404, detail="Compiled story not found.")
+
     detail = CompiledStoryDetail(**row)
 
     # Fetch source article cards
