@@ -26,6 +26,10 @@ export default async function SourcesLeaderboardPage() {
     );
   }
 
+  const safeSources = Array.isArray(sources)
+    ? sources.filter((s) => s && typeof s === "object")
+    : [];
+
   return (
     <div className="mx-auto max-w-3xl flex flex-col gap-8">
       <div>
@@ -37,13 +41,13 @@ export default async function SourcesLeaderboardPage() {
       </div>
 
       <div className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
-        {sources.length === 0 ? (
+        {safeSources.length === 0 ? (
           <div className="px-5 py-10 text-center text-sm text-gray-400">
             No source statistics available yet.
           </div>
-        ) : sources.map((source, index) => (
+        ) : safeSources.map((source, index) => (
           <div
-            key={source.source_name}
+            key={`${source.source_name ?? "unknown"}-${index}`}
             className="flex items-center gap-4 px-5 py-4 border-b border-gray-50 last:border-0 hover:bg-gray-50/60 transition-colors"
           >
             {/* Rank */}
@@ -53,7 +57,7 @@ export default async function SourcesLeaderboardPage() {
 
             {/* Source info */}
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-900 truncate">{source.source_name}</p>
+              <p className="text-sm font-semibold text-gray-900 truncate">{source.source_name ?? "Unknown source"}</p>
               <p className="text-[11px] text-gray-400 mt-0.5">{source.article_count} articles analyzed</p>
             </div>
 
