@@ -20,6 +20,20 @@ Practical notes and gotchas discovered while operating SmartNews.
 - Clamp numeric scores/confidence into `[0.0, 1.0]` before writing to DB.
 - Mark rows as processed even when extracted claim count is zero, otherwise pipeline reprocesses the same records forever.
 
+## Local LLM for claims (RTX 3060 Ti)
+
+- `pipeline/04b_claim_extraction.py` supports `CLAIM_LLM_PROVIDER=local` with OpenAI-compatible local servers.
+- Good default for 8GB VRAM: `qwen2.5:7b-instruct` (via Ollama).
+- Recommended env for local mode:
+  - `CLAIM_LLM_PROVIDER=local`
+  - `CLAIM_MODEL=qwen2.5:7b-instruct`
+  - `LOCAL_OPENAI_BASE_URL=http://127.0.0.1:11434/v1`
+  - `LOCAL_OPENAI_API_KEY=ollama`
+- If extraction fails in local mode, first check:
+  - local server process is running (`ollama serve`)
+  - model is installed (`ollama pull qwen2.5:7b-instruct`)
+  - base URL and model name match local server config.
+
 ## Deployment
 
 - Render free instance can cold start; temporary API latency spikes are expected.

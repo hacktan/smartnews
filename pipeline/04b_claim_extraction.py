@@ -1,4 +1,4 @@
-"""
+﻿"""
 Gold Layer - Claim Extraction
 Extracts atomic factual claims from article full text for matched multi-source stories.
 
@@ -29,7 +29,10 @@ from openai import OpenAI
 load_dotenv()
 
 DB_PATH = os.getenv("DB_PATH", str(Path(__file__).parent.parent / "smartnews.duckdb"))
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+CLAIM_LLM_PROVIDER = os.getenv("CLAIM_LLM_PROVIDER", "openai").strip().lower()
+CLAIM_MODEL = os.getenv("CLAIM_MODEL", os.getenv("OPENAI_MODEL", "gpt-4o-mini"))
+LOCAL_OPENAI_BASE_URL = os.getenv("LOCAL_OPENAI_BASE_URL", "http://127.0.0.1:11434/v1")
+LOCAL_OPENAI_API_KEY = os.getenv("LOCAL_OPENAI_API_KEY", "ollama")
 CLAIM_BATCH_LIMIT = int(os.getenv("CLAIM_BATCH_LIMIT", "40"))
 RATE_LIMIT_SLEEP = 0.25
 
@@ -52,6 +55,39 @@ Rules:
 - Keep each claim under 220 characters.
 - confidence must be between 0.0 and 1.0.
 - Return only JSON, no markdown."""
+
+
+def build_client() -> tuple[OpenAI, str]:
+    if CLAIM_LLM_PROVIDER == "local":
+        client = OpenAI(base_url=LOCAL_OPENAI_BASE_URL, api_key=LOCAL_OPENAI_API_KEY)
+        return client, CLAIM_MODEL
+
+    if not os.getenv("OPENAI_API_KEY"):
+        raise ValueError(
+            "OPENAI_API_KEY must be set for claim extraction when CLAIM_LLM_PROVIDER=openai."
+        )
+
+    return OpenAI(), CLAIM_MODEL
+
+
+def parse_json_payload(raw_content: str) -> dict:
+    raw_content = (raw_content or "").strip()
+    if not raw_content:
+        return {}
+
+    try:
+        return json.loads(raw_content)
+    except Exception:
+        pass
+
+    match = re.search(r"\{.*\}", raw_content, re.DOTALL)
+    if not match:
+        return {}
+
+    try:
+        return json.loads(match.group(0))
+    except Exception:
+        return {}
 
 
 def clamp_confidence(value: object) -> float:
@@ -132,6 +168,7 @@ def fetch_story_members(con: duckdb.DuckDBPyConnection) -> list[tuple[str, str]]
 
 def extract_claims(
     client: OpenAI,
+    model_name: str,
     *,
     title: str,
     category: str,
@@ -146,18 +183,28 @@ def extract_claims(
         f"Article text:\n{text}"
     )
 
-    response = client.chat.completions.create(
-        model=OPENAI_MODEL,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_content},
-        ],
-        temperature=0.0,
-        max_tokens=700,
-        response_format={"type": "json_object"},
-    )
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": user_content},
+    ]
 
-    payload = json.loads(response.choices[0].message.content or "{}")
+    try:
+        response = client.chat.completions.create(
+            model=model_name,
+            messages=messages,
+            temperature=0.0,
+            max_tokens=700,
+            response_format={"type": "json_object"},
+        )
+    except Exception:
+        response = client.chat.completions.create(
+            model=model_name,
+            messages=messages,
+            temperature=0.0,
+            max_tokens=700,
+        )
+
+    payload = parse_json_payload(response.choices[0].message.content or "")
     raw_claims = payload.get("claims", [])
     if not isinstance(raw_claims, list):
         return []
@@ -170,13 +217,16 @@ def extract_claims(
         claim_text = str(item.get("claim", "")).strip()
         if len(claim_text) < 15:
             continue
+
         normalized = normalize_claim(claim_text)
         if not normalized or normalized in seen:
             continue
+
         seen.add(normalized)
         claim_type = str(item.get("type", "OTHER")).upper().strip()
         if claim_type not in {"STATISTIC", "QUOTE", "EVENT", "DATE", "ATTRIBUTION", "OTHER"}:
             claim_type = "OTHER"
+
         cleaned.append(
             {
                 "claim_text": claim_text[:280],
@@ -187,13 +237,11 @@ def extract_claims(
         )
         if len(cleaned) >= 12:
             break
+
     return cleaned
 
 
 def main() -> None:
-    if not os.getenv("OPENAI_API_KEY"):
-        raise ValueError("OPENAI_API_KEY must be set for claim extraction.")
-
     con = duckdb.connect(DB_PATH)
     ensure_claim_columns(con)
     ensure_claim_table(con)
@@ -231,7 +279,9 @@ def main() -> None:
         con.close()
         return
 
-    client = OpenAI()
+    client, model_name = build_client()
+    print(f"Claim provider: {CLAIM_LLM_PROVIDER}")
+    print(f"Claim model   : {model_name}")
     now = datetime.now(timezone.utc)
 
     inserted_rows: list[tuple] = []
@@ -243,6 +293,7 @@ def main() -> None:
         try:
             claims = extract_claims(
                 client,
+                model_name,
                 title=title or "",
                 category=category or "",
                 source_name=source_name or "",
@@ -266,7 +317,7 @@ def main() -> None:
                         claim["claim_type"],
                         claim["confidence"],
                         now,
-                        OPENAI_MODEL,
+                        model_name,
                     )
                 )
 
@@ -275,6 +326,8 @@ def main() -> None:
         except Exception as err:
             failed_entry_ids.append(entry_id)
             print(f"  [{idx}/{len(pending)}] ERROR {entry_id[:10]}... {err}")
+            if CLAIM_LLM_PROVIDER == "local":
+                print("  Hint: check local server is up (e.g. Ollama) and model name is installed.")
         time.sleep(RATE_LIMIT_SLEEP)
 
     if inserted_rows:

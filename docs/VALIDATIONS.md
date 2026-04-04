@@ -24,6 +24,34 @@ Pass criteria:
 - Critical tables are non-empty (`bronze`, `silver`, `gold.news_articles`, `serve.article_cards`).
 - Non-critical checks should not regress unexpectedly (`gold.article_claims`, `serve.story_claims`, `serve.compiled_stories`).
 
+### Local LLM mode for claim extraction (RTX 3060 Ti friendly)
+
+Example with Ollama:
+
+```bash
+ollama serve
+ollama pull qwen2.5:7b-instruct
+```
+
+Set env:
+
+```bash
+CLAIM_LLM_PROVIDER=local
+CLAIM_MODEL=qwen2.5:7b-instruct
+LOCAL_OPENAI_BASE_URL=http://127.0.0.1:11434/v1
+LOCAL_OPENAI_API_KEY=ollama
+```
+
+Then run only claim step:
+
+```bash
+uv run python pipeline/04b_claim_extraction.py
+```
+
+Pass criteria:
+- Script runs without `OPENAI_API_KEY`.
+- `gold.article_claims` row count increases (if pending matched stories exist).
+
 ## 2) API Validation
 
 Minimum smoke checks:
