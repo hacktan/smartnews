@@ -70,10 +70,15 @@ export default async function HomePage() {
   try {
     const nr = await api.narratives(6);
     const items = Array.isArray(nr.items) ? nr.items : [];
-    narratives = items.filter((a) => (a.hype_trend ?? 0) > 0.05).slice(0, 4);
+    const escalating = items.filter((a) => (a.hype_trend ?? 0) > 0.05).slice(0, 4);
+    narratives = escalating.length > 0 ? escalating : items.slice(0, 4);
   } catch {
     narratives = [];
   }
+
+  const topStories = Array.isArray(home.top_stories) && home.top_stories.length > 0
+    ? home.top_stories
+    : (Array.isArray(home.latest_briefs) ? home.latest_briefs.slice(0, 6) : []);
 
   return (
     <div className="flex flex-col gap-14">
@@ -86,10 +91,15 @@ export default async function HomePage() {
           <p className="text-sm text-gray-400 mt-1">Ranked by importance score</p>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {home.top_stories.map((a) => (
+          {topStories.map((a) => (
             <ArticleCard key={a.entry_id} article={a} />
           ))}
         </div>
+        {topStories.length === 0 && (
+          <div className="rounded-xl border border-dashed border-gray-200 py-10 text-center text-sm text-gray-500">
+            Top stories are being refreshed. Please check back in a minute.
+          </div>
+        )}
       </section>
 
       {/* ── Low Hype + Trending ─────────────────────────────── */}

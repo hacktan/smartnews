@@ -20,10 +20,10 @@ load_dotenv()
 DB_PATH = os.getenv("DB_PATH", str(Path(__file__).parent.parent / "smartnews.duckdb"))
 
 WINDOW_DAYS = 7
-TITLE_JACCARD_THRESHOLD = 0.35
-EMBEDDING_COSINE_THRESHOLD = 0.80
-ENTITY_OVERLAP_THRESHOLD = 0.35
-MIN_TIERS_AGREE = 2
+TITLE_JACCARD_THRESHOLD = 0.28
+EMBEDDING_COSINE_THRESHOLD = 0.72
+ENTITY_OVERLAP_THRESHOLD = 0.30
+MIN_TIERS_AGREE = 1
 
 STOP_WORDS = {
     "the", "a", "an", "is", "are", "was", "were", "in", "on", "at", "to", "for",
@@ -161,6 +161,7 @@ def main():
                 methods.append("title")
                 scores.append(title_sim)
 
+            emb_sim = 0.0
             if a["embedding"] and b["embedding"]:
                 emb_sim = cosine_similarity(a["embedding"], b["embedding"])
                 if emb_sim >= EMBEDDING_COSINE_THRESHOLD:
@@ -168,6 +169,7 @@ def main():
                     methods.append("embedding")
                     scores.append(emb_sim)
 
+            ent_sim = 0.0
             if a["entities"] and b["entities"]:
                 ent_sim = entity_overlap(a["entities"], b["entities"])
                 if ent_sim >= ENTITY_OVERLAP_THRESHOLD:
@@ -175,7 +177,14 @@ def main():
                     methods.append("entity")
                     scores.append(ent_sim)
 
-            if tiers_matched >= MIN_TIERS_AGREE:
+            strong_signal = (
+                title_sim >= 0.50
+                or emb_sim >= 0.82
+                or ent_sim >= 0.60
+                or (title_sim >= 0.28 and (emb_sim >= 0.72 or ent_sim >= 0.35))
+            )
+
+            if tiers_matched >= MIN_TIERS_AGREE and strong_signal:
                 avg_score = sum(scores) / len(scores)
                 matches.append((i, j, avg_score, "+".join(methods)))
 

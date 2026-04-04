@@ -380,7 +380,7 @@ def main():
         from sklearn.feature_extraction.text import TfidfVectorizer
 
         texts = [
-            " ".join(filter(None, [r[1], r[7], r[5]]))  # title + subtopic + category
+            " ".join(filter(None, [r[1], r[7], r[6]]))  # title + subtopic + category
             for r in cards_data
         ]
         entry_ids_all = [r[0] for r in cards_data]
@@ -414,10 +414,10 @@ def main():
 
     # ── 4. Build serve.story_clusters ─────────────────────────────────────────
     if cluster_map:
-        entry_to_cat = {r[0]: (r[5] or "General Tech") for r in cards_data}
-        entry_to_imp = {r[0]: (r[13] or 0.5) for r in cards_data}
-        entry_to_cred = {r[0]: (r[12] or 0.5) for r in cards_data}
-        entry_to_hype = {r[0]: (r[11] or 0.5) for r in cards_data}
+        entry_to_cat = {r[0]: (r[6] or "General Tech") for r in cards_data}
+        entry_to_imp = {r[0]: (r[12] or 0.5) for r in cards_data}
+        entry_to_cred = {r[0]: (r[11] or 0.5) for r in cards_data}
+        entry_to_hype = {r[0]: (r[10] or 0.5) for r in cards_data}
 
         cluster_members: dict[int, list[str]] = {}
         for eid, cid in cluster_map.items():

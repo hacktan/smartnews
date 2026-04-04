@@ -32,6 +32,8 @@ def list_narratives(limit: int = 20, category: str = ""):
 
     cat_filter = f"AND category = '{category}'" if category else ""
 
+    safe_limit = max(1, min(limit, 100))
+
     rows = query(
         f"""
         SELECT
@@ -52,11 +54,65 @@ def list_narratives(limit: int = 20, category: str = ""):
         FROM serve.story_arcs
         WHERE 1=1 {cat_filter}
         ORDER BY avg_importance DESC, article_count DESC
-        LIMIT {limit}
+        LIMIT {safe_limit}
         """
     )
 
     items = [NarrativeArc(**r) for r in rows]
+
+    # Fallback: if there are too few explicit arcs, synthesize narrative cards from story clusters.
+    if len(items) < safe_limit:
+        remaining = safe_limit - len(items)
+        cluster_rows = query(
+            f"""
+            SELECT
+                cluster_id,
+                label,
+                article_count,
+                top_categories,
+                avg_importance,
+                avg_hype,
+                avg_credibility
+            FROM serve.story_clusters
+            WHERE article_count >= 2
+            ORDER BY avg_importance DESC, article_count DESC
+            LIMIT {remaining * 2}
+            """
+        )
+
+        existing_ids = {arc.arc_id for arc in items}
+        for r in cluster_rows:
+            cid = int(r["cluster_id"])
+            arc_id = f"cluster-{cid}"
+            if arc_id in existing_ids:
+                continue
+
+            title = r.get("label") or f"Cluster {cid + 1}"
+            category_name = r.get("top_categories") or "General"
+            items.append(
+                NarrativeArc(
+                    arc_id=arc_id,
+                    subtopic=title,
+                    category=category_name,
+                    article_count=int(r.get("article_count") or 0),
+                    first_seen=None,
+                    last_seen=None,
+                    span_days=None,
+                    hype_start=r.get("avg_hype"),
+                    hype_end=r.get("avg_hype"),
+                    hype_trend=0.0,
+                    avg_importance=r.get("avg_importance"),
+                    avg_hype=r.get("avg_hype"),
+                    avg_credibility=r.get("avg_credibility"),
+                    latest_title=None,
+                )
+            )
+            existing_ids.add(arc_id)
+
+            if len(items) >= safe_limit:
+                break
+
+    items = items[:safe_limit]
     result = NarrativesResponse(items=items, total=len(items))
     _list_cache[cache_key] = result
     return result
@@ -69,6 +125,79 @@ def get_narrative(arc_id: str):
     """
     if arc_id in _detail_cache:
         return _detail_cache[arc_id]
+
+    if arc_id.startswith("cluster-"):
+        try:
+            cluster_id = int(arc_id.split("-", 1)[1])
+        except Exception:
+            raise HTTPException(status_code=404, detail="Narrative arc not found")
+
+        c_rows = query(
+            """
+            SELECT
+                cluster_id,
+                label,
+                article_count,
+                top_categories,
+                avg_importance,
+                avg_hype,
+                avg_credibility
+            FROM serve.story_clusters
+            WHERE cluster_id = ?
+            LIMIT 1
+            """,
+            params=(cluster_id,),
+        )
+
+        if not c_rows:
+            raise HTTPException(status_code=404, detail="Narrative arc not found")
+
+        cluster = c_rows[0]
+        article_rows = query(
+            """
+            SELECT
+                entry_id,
+                title,
+                source_name,
+                published_at,
+                category,
+                summary_snippet,
+                hype_score,
+                credibility_score,
+                importance_score,
+                link,
+                CAST(publish_date AS STRING) AS publish_date,
+                image_url
+            FROM serve.article_cards
+            WHERE cluster_id = ?
+            ORDER BY importance_score DESC NULLS LAST, published_at DESC
+            LIMIT 20
+            """,
+            params=(cluster_id,),
+        )
+        articles = [ArticleCard(**r) for r in article_rows]
+
+        detail = NarrativeDetail(
+            arc_id=arc_id,
+            subtopic=cluster.get("label") or f"Cluster {cluster_id + 1}",
+            category=cluster.get("top_categories") or "General",
+            article_count=int(cluster.get("article_count") or len(articles)),
+            first_seen=None,
+            last_seen=None,
+            span_days=None,
+            entry_ids=[a.entry_id for a in articles],
+            titles=[a.title for a in articles],
+            hype_start=cluster.get("avg_hype"),
+            hype_end=cluster.get("avg_hype"),
+            hype_trend=0.0,
+            avg_importance=cluster.get("avg_importance"),
+            avg_hype=cluster.get("avg_hype"),
+            avg_credibility=cluster.get("avg_credibility"),
+            latest_title=articles[0].title if articles else None,
+            articles=articles,
+        )
+        _detail_cache[arc_id] = detail
+        return detail
 
     rows = query(
         f"""
