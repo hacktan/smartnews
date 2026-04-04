@@ -37,17 +37,17 @@ concurrency:
 jobs:
   pipeline:
     name: Run SmartNews Pipeline
-    runs-on: ${{ github.event.inputs.runner || 'ubuntu-latest' }}
+    runs-on: ${{ github.event.inputs.runner || 'self-hosted' }}
     timeout-minutes: 60
 
     env:
       DB_PATH: smartnews.duckdb
-      AI_LLM_PROVIDER: ${{ github.event.inputs.llm_provider || 'openai' }}
+      AI_LLM_PROVIDER: ${{ github.event.inputs.llm_provider || 'local' }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      OPENAI_MODEL: gpt-4o-mini
+      OPENAI_MODEL: ${{ github.event.inputs.llm_provider == 'openai' && 'gpt-4o-mini' || 'qwen2.5:7b-instruct' }}
       OPENAI_EMBEDDING_MODEL: text-embedding-3-small
       LOCAL_OPENAI_BASE_URL: ${{ github.event.inputs.local_openai_base_url || 'http://127.0.0.1:11434/v1' }}
-      LOCAL_OPENAI_API_KEY: ${{ secrets.LOCAL_OPENAI_API_KEY }}
+      LOCAL_OPENAI_API_KEY: ollama
       ENRICHMENT_BATCH_LIMIT: "50"
       SCRAPE_BATCH_LIMIT: "100"
 
