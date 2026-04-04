@@ -55,7 +55,7 @@ jobs:
       LOCAL_OPENAI_API_KEY: ollama
       CLAIM_LLM_PROVIDER: ${{ github.event.inputs.llm_provider || 'local' }}
       CLAIM_MODEL: ${{ github.event.inputs.llm_provider == 'openai' && 'gpt-4o-mini' || 'qwen2.5:7b-instruct' }}
-      ENRICHMENT_BATCH_LIMIT: "50"
+      ENRICHMENT_BATCH_LIMIT: "20"
       SCRAPE_BATCH_LIMIT: "100"
 
     steps:
