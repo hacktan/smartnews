@@ -97,10 +97,11 @@ def list_compiled_stories(limit: int = 20, include_pending: bool = False):
 
 
 @router.get("/story/{story_id}", response_model=CompiledStoryDetail)
-def get_compiled_story(story_id: str):
+def get_compiled_story(story_id: str, include_pending: bool = False):
     """Return full compiled story detail including body, claims, and source articles."""
-    if story_id in _detail_cache:
-        return _detail_cache[story_id]
+    cache_key = f"{story_id}:{include_pending}"
+    if cache_key in _detail_cache:
+        return _detail_cache[cache_key]
 
     rows = query(
         """
@@ -125,6 +126,9 @@ def get_compiled_story(story_id: str):
         """,
         params=(story_id,),
     )
+
+    if not rows and not include_pending:
+        raise HTTPException(status_code=404, detail="Compiled story not found.")
 
     if not rows:
         fallback = query(
@@ -215,7 +219,7 @@ def get_compiled_story(story_id: str):
                 + "\n".join(snippets)
             )
 
-        _detail_cache[story_id] = detail
+        _detail_cache[cache_key] = detail
         return detail
 
     row = rows[0]
@@ -254,5 +258,5 @@ def get_compiled_story(story_id: str):
         )
         detail.source_articles = [ArticleCard(**r) for r in card_rows]
 
-    _detail_cache[story_id] = detail
+    _detail_cache[cache_key] = detail
     return detail
