@@ -28,6 +28,8 @@ def get_source_leaderboard():
             ROUND(AVG(importance_score), 3) AS avg_importance
         FROM serve.article_cards
         WHERE source_name IS NOT NULL
+          AND credibility_score IS NOT NULL
+          AND credibility_score != 0.5
         GROUP BY source_name
         HAVING COUNT(*) > 1
         ORDER BY avg_credibility DESC, article_count DESC

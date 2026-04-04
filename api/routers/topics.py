@@ -29,7 +29,7 @@ def get_topic_history(
         return _topics_cache[cache_key]
 
     rows = query(
-        """
+        f"""
         SELECT
           CAST(snapshot_date AS STRING) AS snapshot_date,
           SUM(article_count) AS article_count,
@@ -38,11 +38,11 @@ def get_topic_history(
           ROUND(AVG(avg_importance), 3) AS avg_importance
         FROM serve.hype_snapshots
         WHERE LOWER(topic) = LOWER(?)
-          AND snapshot_date >= DATE_SUB(current_date(), ?)
+          AND snapshot_date >= current_date - INTERVAL '{days}' DAY
         GROUP BY snapshot_date
         ORDER BY snapshot_date ASC
         """,
-        (normalized, days),
+        (normalized,),
     )
 
     points = [TopicHistoryPoint(**dict(r)) for r in rows]

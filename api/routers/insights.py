@@ -43,13 +43,13 @@ def get_blind_spots(limit: int = 12):
         INNER JOIN (
             SELECT entity_name
             FROM serve.entity_index
-            WHERE published_at >= current_timestamp() - INTERVAL 7 DAYS
+            WHERE published_at >= now() - INTERVAL 7 DAYS
               AND entity_type IN ('PERSON', 'ORG', 'PLACE', 'EVENT')
             GROUP BY entity_name
             HAVING COUNT(DISTINCT source_name) = 1
                AND COUNT(*) >= 1
         ) single_source USING (entity_name)
-        WHERE ei.published_at >= current_timestamp() - INTERVAL 7 DAYS
+        WHERE ei.published_at >= now() - INTERVAL 7 DAYS
           AND ei.importance_score IS NOT NULL
           AND ei.importance_score > 0.45
         ORDER BY ei.importance_score DESC, ei.published_at DESC
