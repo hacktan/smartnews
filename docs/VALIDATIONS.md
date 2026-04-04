@@ -316,3 +316,36 @@ Data presence verification (API):
 
 Conclusion:
 - Narrative, Briefing, and Multi-source surfaces are now populated and reachable in production.
+
+### Iteration I — Compiled Stories Scale-up (2026-04-04)
+
+Problem:
+- `serve.compiled_stories` had only 1 entry despite 16 story groups in `gold.story_matches`.
+- Root cause: compilation gate required `COMPILATION_MIN_FULLTEXT_SOURCES=2` (≥2 articles with full_text ≥400 chars). Most groups had scraping gaps.
+
+Fix applied:
+- `pipeline/04_ai_enrichment.py`: replaced fulltext-only gate with usable-text gate.
+  - Old: skip if < 2 articles have `full_text >= 400`.
+  - New: skip only if < 2 articles have ANY usable text (`full_text >= 200` OR `clean_summary >= 50`).
+  - Body building already fell back to `clean_summary` — gate was the only blocker.
+- Commit: `3c8cb02`
+
+Local pipeline results (post-fix):
+- `gold.compiled_stories`: 1 → **14** (2 skipped due to Ollama JSON parse errors)
+- `serve.compiled_stories`: 14
+- `serve.story_arcs`: 16
+- `serve.article_cards`: 896
+- `validate.py`: 1 non-blocking FAIL (fulltext fraction 13.5% < 95% threshold — structural scraping limit, pre-existing)
+
+Enrichment run:
+- Provider: local (Ollama qwen2.5:7b-instruct)
+- 80 articles enriched, 100 embeddings written
+- 14/16 story groups compiled
+
+DB upload:
+- `gh release upload db-latest smartnews.duckdb --clobber` — success
+- Render redeploy triggered by commit push (DB_SYNC_ON_STARTUP=true)
+
+Live verification:
+- Render deploy in progress at time of writing (free-tier cold start + DB sync ~3-5 min)
+- Expected: `/api/stories?limit=20` → `stories_count=14`
