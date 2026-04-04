@@ -51,7 +51,6 @@ export default function ArticleCard({ article, compact = false }: Props) {
             alt=""
             className="shrink-0 w-[72px] h-[72px] rounded-xl object-cover bg-gray-100"
             loading="lazy"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
           />
         )}
       </article>
@@ -70,10 +69,6 @@ export default function ArticleCard({ article, compact = false }: Props) {
             alt=""
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.04]"
             loading="lazy"
-            onError={(e) => {
-              const p = (e.target as HTMLImageElement).parentElement;
-              if (p) p.style.display = "none";
-            }}
           />
         </div>
       )}
