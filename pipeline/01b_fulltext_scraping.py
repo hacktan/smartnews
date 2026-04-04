@@ -19,10 +19,10 @@ load_dotenv()
 
 DB_PATH = os.getenv("DB_PATH", str(Path(__file__).parent.parent / "smartnews.duckdb"))
 
-SCRAPE_BATCH_LIMIT = int(os.getenv("SCRAPE_BATCH_LIMIT", "100"))
+SCRAPE_BATCH_LIMIT = int(os.getenv("SCRAPE_BATCH_LIMIT", "200"))
 SCRAPE_DELAY = 1.0    # seconds between requests (polite crawling)
 SCRAPE_TIMEOUT = 15   # seconds per HTTP request
-MAX_PER_DOMAIN = 10   # max articles per domain per run
+MAX_PER_DOMAIN = 20   # max articles per domain per run
 HTTP_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "

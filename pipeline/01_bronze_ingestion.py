@@ -22,6 +22,13 @@ RSS_FEEDS = [
     "https://feeds.arstechnica.com/arstechnica/index",
     "https://www.engadget.com/rss.xml",
     "https://venturebeat.com/feed/",
+    "https://techcrunch.com/feed/",
+    "https://www.wired.com/feed/rss",
+    "https://www.technologyreview.com/feed/",
+    "https://www.zdnet.com/news/rss.xml",
+    "https://www.cnet.com/rss/news/",
+    "https://www.theguardian.com/uk/technology/rss",
+    "https://mashable.com/feeds/rss/tech",
 ]
 
 SOURCE_NAME_OVERRIDES = {
@@ -31,6 +38,13 @@ SOURCE_NAME_OVERRIDES = {
     "https://feeds.arstechnica.com/arstechnica/index":              "Ars Technica",
     "https://www.engadget.com/rss.xml":                             "Engadget",
     "https://venturebeat.com/feed/":                                "VentureBeat",
+    "https://techcrunch.com/feed/":                                 "TechCrunch",
+    "https://www.wired.com/feed/rss":                               "WIRED",
+    "https://www.technologyreview.com/feed/":                       "MIT Technology Review",
+    "https://www.zdnet.com/news/rss.xml":                           "ZDNet",
+    "https://www.cnet.com/rss/news/":                               "CNET",
+    "https://www.theguardian.com/uk/technology/rss":                "The Guardian Tech",
+    "https://mashable.com/feeds/rss/tech":                          "Mashable Tech",
 }
 
 
