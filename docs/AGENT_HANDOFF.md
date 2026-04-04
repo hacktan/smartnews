@@ -105,6 +105,9 @@ Execution boundary (critical):
   - `pipeline/04_ai_enrichment.py` rerun with local provider produced `gold.compiled_stories=1`.
   - `pipeline/05_serving_projection.py` rerun produced `serve.compiled_stories=1` and `serve.daily_briefing=ok`.
   - Updated `smartnews.duckdb` uploaded to GitHub Release asset `db-latest`.
+  - After forced API redeploy, live endpoints confirmed refreshed data:
+    - `/api/briefing/daily` -> 200 (`article_count=7`)
+    - `/api/stories?limit=3` -> `stories_count=1`
 
 ## 6) First Tasks For Next Agent (Priority)
 

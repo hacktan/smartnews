@@ -246,3 +246,16 @@ Observed result:
 
 Operational note:
 - Updated local DB was uploaded to GitHub Release asset `db-latest/smartnews.duckdb`.
+
+### Iteration F — Live API Sync Confirmed (2026-04-04)
+
+Action:
+- Forced API redeploy via no-op commit to trigger startup DB sync.
+
+Post-redeploy live checks:
+- `/health` -> `200`
+- `/api/briefing/daily` -> `200` (`article_count=7`)
+- `/api/stories?limit=3` -> `200` (`stories_count=1`)
+
+Conclusion:
+- Local Llama-enriched outputs are now visible in live API through refreshed `db-latest` sync.
