@@ -45,6 +45,7 @@ jobs:
         shell: bash
 
     env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       DB_PATH: smartnews.duckdb
       AI_LLM_PROVIDER: ${{ github.event.inputs.llm_provider || 'local' }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
