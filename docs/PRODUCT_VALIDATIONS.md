@@ -1,5 +1,9 @@
 # SmartNews — Product Validations
 
+> Legacy notice (2026-04-04): this file reflects older Databricks/Azure-era phase gates and is kept for historical reference.
+>
+> For current stack validation and production runbook, use `docs/VALIDATIONS.md` and `docs/AGENT_HANDOFF.md`.
+
 This document defines the validation checklist for each layer of the SmartNews platform.
 An agent or developer must run through the relevant section before considering a layer complete.
 If a validation fails, the layer is NOT done — fix and re-validate.

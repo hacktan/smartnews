@@ -1,5 +1,8 @@
 # SmartNews — Product Goals & Competitive Strategy
 
+> Current-state note (2026-04-04): this is a roadmap document.
+> Implementation truth and live status are tracked in `docs/AGENT_HANDOFF.md` and `docs/VALIDATIONS.md`.
+
 This document defines the goals, principles, competitive positioning, and phased roadmap for SmartNews.
 It must be consulted at every phase of development to prevent scope drift.
 
@@ -199,11 +202,11 @@ After analyzing Google News, Apple News, SmartNews (app), Artifact (dead), Feedl
 - [x] Generated in 05_serving_projection.py → stored in serve.daily_briefing (updates every pipeline run)
 - [ ] Optional: personalized briefing based on reading history *(stretch goal)*
 
-#### 7B — Narrative Tracker (Story Arcs)
-- [ ] Group articles into temporal narrative arcs (same story evolving over days)
-- [ ] Timeline view: "Day 1: Announcement → Day 3: Expert reaction → Day 5: First reviews"
-- [ ] Each node shows score shifts (hype went up/down, credibility changed)
-- [ ] *Goes beyond "related stories" into story evolution tracking*
+#### 7B — Narrative Tracker (Story Arcs) ✅ COMPLETE
+- [x] Group articles into temporal narrative arcs (same story evolving over days)
+- [x] Timeline view on narrative detail page
+- [x] Arc-level score evolution shown (hype trend + score strip per node)
+- [x] *Goes beyond "related stories" into story evolution tracking*
 
 #### 7C — Progressive Personalization
 - [ ] Event pipeline → user profile generation from click/dwell/save events

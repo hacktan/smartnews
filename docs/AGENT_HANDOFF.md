@@ -91,17 +91,15 @@ Execution boundary (critical):
   - `pipeline/04_ai_enrichment.py` now supports `AI_LLM_PROVIDER=local` (OpenAI-compatible endpoint).
   - `.github/workflows/pipeline.yml` enrichment steps now run when either `AI_LLM_PROVIDER=local` or `OPENAI_API_KEY` exists.
   - Added workflow warning that GitHub-hosted runners cannot reach local `localhost` endpoints.
-- Recovery status (latest):
-  - Workflow run `23968702286` completed successfully.
-  - Release upload succeeded after workflow `permissions: contents: write` fix.
-  - Live snapshot after run: `narratives_count=1`, `stories_count=0`, `briefing=404`.
 - Local Llama recovery status (latest):
   - `pipeline/04_ai_enrichment.py` rerun with local provider produced `gold.compiled_stories=1`.
   - `pipeline/05_serving_projection.py` rerun produced `serve.compiled_stories=1` and `serve.daily_briefing=ok`.
   - Updated `smartnews.duckdb` uploaded to GitHub Release asset `db-latest`.
-  - After forced API redeploy, live endpoints confirmed refreshed data:
+  - After forced API redeploy and sync, live endpoints confirmed refreshed data.
+  - Current verified snapshot (2026-04-04):
     - `/api/briefing/daily` -> 200 (`article_count=7`)
-    - `/api/stories?limit=3` -> `stories_count=1`
+    - `/api/narratives?limit=5` -> `narratives_count=1`
+    - `/api/stories?limit=5` -> `stories_count=1`
   - Frontend regression sweep passed on key routes: `/`, `/briefing`, `/narratives`, `/stories`, `/sources`, `/search?q=ai`.
 
 ## 6) First Tasks For Next Agent (Priority)
