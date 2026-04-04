@@ -6,6 +6,18 @@ on:
     - cron: "0 */6 * * *"
   workflow_dispatch:
     inputs:
+      runner:
+        description: "Runner label (ubuntu-latest or self-hosted)"
+        required: false
+        default: "ubuntu-latest"
+      llm_provider:
+        description: "LLM provider: openai or local"
+        required: false
+        default: "openai"
+      local_openai_base_url:
+        description: "OpenAI-compatible base URL for local mode"
+        required: false
+        default: "http://127.0.0.1:11434/v1"
       skip_scraping:
         description: "Skip full-text scraping (faster, no new images)"
         required: false
@@ -22,14 +34,17 @@ concurrency:
 jobs:
   pipeline:
     name: Run SmartNews Pipeline
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.inputs.runner || 'ubuntu-latest' }}
     timeout-minutes: 60
 
     env:
       DB_PATH: smartnews.duckdb
+      AI_LLM_PROVIDER: ${{ github.event.inputs.llm_provider || 'openai' }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       OPENAI_MODEL: gpt-4o-mini
       OPENAI_EMBEDDING_MODEL: text-embedding-3-small
+      LOCAL_OPENAI_BASE_URL: ${{ github.event.inputs.local_openai_base_url || 'http://127.0.0.1:11434/v1' }}
+      LOCAL_OPENAI_API_KEY: ${{ secrets.LOCAL_OPENAI_API_KEY }}
       ENRICHMENT_BATCH_LIMIT: "50"
       SCRAPE_BATCH_LIMIT: "100"
 
@@ -80,6 +95,18 @@ jobs:
             echo "First run — starting with empty database"
           fi
 
+      - name: Enrichment availability check
+        run: |
+          if [ "${{ github.event.inputs.skip_enrichment || 'false' }}" != "true" ] && [ "${AI_LLM_PROVIDER}" = "openai" ] && [ -z "${OPENAI_API_KEY}" ]; then
+            echo "⚠ OPENAI_API_KEY is not configured. Enrichment/claims/compilation steps will be skipped."
+          fi
+          if [ "${{ github.event.inputs.skip_enrichment || 'false' }}" != "true" ] && [ "${AI_LLM_PROVIDER}" = "local" ]; then
+            echo "⚠ AI_LLM_PROVIDER=local. This requires a reachable OpenAI-compatible local endpoint from the runner."
+            if [ -z "${LOCAL_OPENAI_API_KEY}" ]; then
+              echo "ℹ LOCAL_OPENAI_API_KEY secret is empty; many local providers accept a dummy key."
+            fi
+          fi
+
       # ── Pipeline steps ─────────────────────────────────────────────────────
       - name: "01 Bronze — RSS ingestion"
         run: uv run python pipeline/01_bronze_ingestion.py
@@ -96,7 +123,7 @@ jobs:
         run: uv run python pipeline/03_gold_aggregation.py
 
       - name: "04 AI — Enrichment + embeddings (pass 1)"
-        if: ${{ github.event.inputs.skip_enrichment != 'true' }}
+        if: github.event.inputs.skip_enrichment != 'true' && (env.AI_LLM_PROVIDER == 'local' || env.OPENAI_API_KEY != '')
         run: uv run python pipeline/04_ai_enrichment.py
         # Pass 1: enriches articles + generates embeddings.
         # Story compilation is skipped here (no story_matches yet).
@@ -107,12 +134,12 @@ jobs:
         # If enrichment was skipped, this will match on title+entity only.
 
       - name: "04b Gold — Claim extraction"
-        if: ${{ github.event.inputs.skip_enrichment != 'true' }}
+        if: github.event.inputs.skip_enrichment != 'true' && (env.AI_LLM_PROVIDER == 'local' || env.OPENAI_API_KEY != '')
         run: uv run python pipeline/04b_claim_extraction.py
         # Extracts factual claims per article for matched multi-source stories.
 
       - name: "04 AI — Story compilation (pass 2)"
-        if: ${{ github.event.inputs.skip_enrichment != 'true' }}
+        if: github.event.inputs.skip_enrichment != 'true' && (env.AI_LLM_PROVIDER == 'local' || env.OPENAI_API_KEY != '')
         run: uv run python pipeline/04_ai_enrichment.py
         # Pass 2: ENRICHMENT_BATCH_LIMIT articles skipped (already enriched).
         # Only story compilation runs (reads gold.story_matches from 03b).

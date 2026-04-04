@@ -94,10 +94,31 @@ def _download_db_from_github(db_path: str) -> None:
         f.write(data)
 
 
+def _sync_db_from_github(db_path: str) -> None:
+    """Download latest DB asset atomically and replace local DB file."""
+    tmp_path = f"{db_path}.download"
+    _download_db_from_github(tmp_path)
+    os.replace(tmp_path, db_path)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Download DB from GitHub Releases if not present locally
-    if not os.path.exists(settings.db_path):
+    # Keep API in sync with latest release-backed DB unless explicitly disabled.
+    if settings.db_sync_on_startup:
+        try:
+            logger.info("Syncing database from GitHub Releases on startup...")
+            _sync_db_from_github(settings.db_path)
+            logger.info("Database synced: %s", settings.db_path)
+        except Exception as err:
+            if os.path.exists(settings.db_path):
+                logger.warning(
+                    "DB sync failed, continuing with local DB at %s (%s)",
+                    settings.db_path,
+                    err,
+                )
+            else:
+                raise
+    elif not os.path.exists(settings.db_path):
         logger.info("Downloading database from GitHub Releases...")
         _download_db_from_github(settings.db_path)
         logger.info("Database downloaded: %s", settings.db_path)

@@ -19,6 +19,8 @@ Practical notes and gotchas discovered while operating SmartNews.
 - Use `response_format={"type":"json_object"}` for extraction tasks to reduce parser failures.
 - Clamp numeric scores/confidence into `[0.0, 1.0]` before writing to DB.
 - Mark rows as processed even when extracted claim count is zero, otherwise pipeline reprocesses the same records forever.
+- `pipeline/04_ai_enrichment.py` now supports `AI_LLM_PROVIDER=local` with OpenAI-compatible endpoints (e.g. Ollama/vLLM).
+- GitHub-hosted Actions cannot call your local `127.0.0.1`; local Llama mode in CI requires either a self-hosted runner or a reachable network endpoint.
 
 ## Local LLM for claims (RTX 3060 Ti)
 
@@ -39,6 +41,8 @@ Practical notes and gotchas discovered while operating SmartNews.
 - Render free instance can cold start; temporary API latency spikes are expected.
 - Vercel may serve previous deployment until alias update completes; verify using both deployment URL and aliased URL.
 - If frontend routes return 500 while API is healthy, check server-component-incompatible handlers first (for example `onError` inside server component markup).
+- API now supports startup DB sync (`DB_SYNC_ON_STARTUP`, default `true`) so new deployments refresh `smartnews.duckdb` from `db-latest` automatically.
+- If live API data looks stale while local DB is current, redeploy/restart API service to trigger startup sync.
 
 ## Validation discipline
 
@@ -46,6 +50,13 @@ Practical notes and gotchas discovered while operating SmartNews.
 - For frontend/API changes, run both:
   - local build (`npm run build`)
   - live smoke checks (`/`, `/stories`, `/story/<id>`, `/api/story/<id>/claims`).
+
+## Frontend resilience learnings (2026-04-04)
+
+- A route can look "empty" even when API returns `200`; some endpoints may return valid but empty payloads (`items: []`).
+- Multi-source surfaces (`/stories`, `/narratives`, `/briefing`) need explicit no-data states because data can legitimately be missing between pipeline runs.
+- For server components, every optional API segment should be guarded (`Array.isArray`, null-safe fallbacks) to prevent full-page render failures.
+- `404` from `/api/briefing/daily` is a normal operational state when no briefing has been generated yet; frontend should treat it as a friendly empty state, not an error page.
 
 ## Documentation discipline
 

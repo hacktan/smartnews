@@ -79,13 +79,41 @@ uv sync
 | Variable | Required | Description |
 |----------|----------|-------------|
 | OPENAI_API_KEY | Yes | OpenAI API key |
+| AI_LLM_PROVIDER | No | `openai` (default) or `local` (OpenAI-compatible endpoint) |
 | DB_PATH | No | DuckDB path (default: smartnews.duckdb) |
 | OPENAI_MODEL | No | Chat model (default: gpt-4o-mini) |
+| LOCAL_OPENAI_BASE_URL | Local mode | OpenAI-compatible base URL (default: `http://127.0.0.1:11434/v1`) |
+| LOCAL_OPENAI_API_KEY | Local mode | API key for local endpoint (default: `ollama`) |
 | ENRICHMENT_BATCH_LIMIT | No | Max articles per enrichment run (default: 50) |
 | GITHUB_TOKEN | API deploy optional | Recommended for private repos or rate-limit safety |
 | GITHUB_REPOSITORY | API deploy | Repo slug (default: hacktan/smartnews) |
 | GITHUB_RELEASE_TAG | API deploy | Release tag for DB lookup (default: db-latest) |
 | GITHUB_DB_ASSET_NAME | API deploy | DB asset filename (default: smartnews.duckdb) |
+
+### Local Llama/Ollama mode
+
+`pipeline/04_ai_enrichment.py` and `pipeline/04b_claim_extraction.py` support OpenAI-compatible local providers:
+
+```bash
+AI_LLM_PROVIDER=local
+OPENAI_MODEL=qwen2.5:7b-instruct
+LOCAL_OPENAI_BASE_URL=http://127.0.0.1:11434/v1
+LOCAL_OPENAI_API_KEY=ollama
+```
+
+Important: GitHub-hosted runners cannot access your machine's `localhost` endpoint.
+For Llama/Ollama in CI, use a self-hosted runner or a network-reachable OpenAI-compatible endpoint.
+
+When triggering workflow manually, choose a self-hosted runner if you want to use local provider mode:
+
+```bash
+gh workflow run pipeline.yml --ref main \
+    -f runner=self-hosted \
+    -f llm_provider=local \
+    -f local_openai_base_url=http://127.0.0.1:11434/v1 \
+    -f skip_scraping=false \
+    -f skip_enrichment=false
+```
 
 ## API Deploy (Render)
 

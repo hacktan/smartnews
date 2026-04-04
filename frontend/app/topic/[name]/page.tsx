@@ -36,7 +36,12 @@ export default async function TopicPage({ params }: Props) {
     };
   }
 
-  const search = await api.search(topic, { days: 14 });
+  let search = { query: topic, total: 0, items: [] as Awaited<ReturnType<typeof api.search>>["items"] };
+  try {
+    search = await api.search(topic, { days: 14 });
+  } catch {
+    search = { query: topic, total: 0, items: [] };
+  }
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-8">

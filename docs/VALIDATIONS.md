@@ -96,3 +96,88 @@ Pass criteria:
 - Broken article pages (`/article/[id]`) must not return 500.
 - Footer GitHub link must point to `https://github.com/hacktan/smartnews`.
 - Workflow order in `.github/workflows/pipeline.yml` must include `04b_claim_extraction.py`.
+
+## 5) Latest Validation Loop (2026-04-04)
+
+### Iteration A — Frontend Resilience Pass
+
+Changes applied:
+- `frontend/app/sources/page.tsx`
+	- Added API error fallback UI.
+	- Added empty-state rendering when source leaderboard payload is empty.
+- `frontend/app/page.tsx`
+	- Hardened narratives extraction with array guards (`Array.isArray`).
+- `frontend/app/topic/[name]/page.tsx`
+	- Wrapped topic coverage search call with fallback response when API fails.
+- `frontend/app/narratives/[arcId]/page.tsx`
+	- Added timeline array guard to avoid runtime crashes on malformed/partial payloads.
+- `frontend/app/search/page.tsx`
+	- Removed unused catch variable found by lint.
+
+Checks run:
+
+```bash
+cd frontend
+npm run lint
+```
+
+Result:
+- ESLint completed with no remaining warnings after fixes.
+
+### Iteration B — Live API Smoke
+
+Commands (PowerShell equivalent used):
+
+```bash
+GET /health
+GET /api/home
+GET /api/briefing/daily
+GET /api/narratives?limit=5
+GET /api/stories?limit=5
+GET /api/sources/leaderboard
+```
+
+Observed status:
+- `200`: `/health`, `/api/home`, `/api/narratives`, `/api/stories`, `/api/sources/leaderboard`
+- `404`: `/api/briefing/daily` (no daily briefing row currently available)
+
+Data availability snapshot:
+- `/api/narratives?limit=1` currently returns an empty `items` array.
+- `/api/stories?limit=1` currently returns an empty `items` array.
+
+Interpretation:
+- Blank-route perception is currently dominated by missing upstream data, not only frontend rendering bugs.
+- Frontend should continue to prefer explicit empty states over hard failures for all multi-source surfaces.
+
+### Iteration C — Data-State Verification + API Sync Hardening
+
+GitHub trigger attempt:
+
+```bash
+gh workflow list
+```
+
+Result:
+- Blocked by auth in local shell (`HTTP 401: Bad credentials`).
+
+Local pipeline verification command:
+
+```bash
+python pipeline/validate.py
+```
+
+Result snapshot (local DB):
+- `serve.story_arcs: 1`
+- `serve.story_claims: 5`
+- `serve.daily_briefing: 0`
+- All critical checks passed.
+
+Follow-up hardening applied:
+- API now syncs `smartnews.duckdb` from GitHub Release on startup by default:
+	- `api/config.py` -> `DB_SYNC_ON_STARTUP` (default `true`)
+	- `api/main.py` -> startup sync with safe fallback to local DB if sync fails
+	- `render.yaml` -> explicit `DB_SYNC_ON_STARTUP="true"`
+
+Operational interpretation:
+- Local DB has narrative/claims data, while live API previously returned empty lists for multi-source endpoints.
+- Likely cause was stale DB file on running API instance; startup sync + redeploy should close this gap.

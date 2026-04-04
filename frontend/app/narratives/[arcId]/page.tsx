@@ -134,6 +134,8 @@ export default async function NarrativeDetailPage({ params }: Props) {
       ? "text-green-600 bg-green-50 border-green-200"
       : "text-gray-500 bg-gray-50 border-gray-200";
 
+  const timelineArticles = Array.isArray(arc.articles) ? arc.articles : [];
+
   return (
     <div className="mx-auto max-w-3xl">
       {/* Breadcrumb */}
@@ -197,17 +199,17 @@ export default async function NarrativeDetailPage({ params }: Props) {
         {/* Timeline */}
         <div className="md:col-span-2 rounded-xl border border-gray-200 bg-white p-5">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-5">Story Timeline</h2>
-          {arc.articles.length === 0 ? (
+          {timelineArticles.length === 0 ? (
             <p className="text-sm text-gray-400">No article details available.</p>
           ) : (
             <div>
-              {arc.articles.map((article, i) => (
+              {timelineArticles.map((article, i) => (
                 <ArticleTimelineItem
                   key={article.entry_id}
                   article={article}
                   index={i}
                   isFirst={i === 0}
-                  isLast={i === arc.articles.length - 1}
+                  isLast={i === timelineArticles.length - 1}
                 />
               ))}
             </div>

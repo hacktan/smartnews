@@ -9,6 +9,8 @@ services:
     envVars:
       - key: DB_PATH
         value: smartnews.duckdb
+      - key: DB_SYNC_ON_STARTUP
+        value: "true"
       - key: GITHUB_REPOSITORY
         value: hacktan/smartnews
       - key: GITHUB_RELEASE_TAG

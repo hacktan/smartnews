@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     github_repository: str = "hacktan/smartnews"
     github_release_tag: str = "db-latest"
     github_db_asset_name: str = "smartnews.duckdb"
+    db_sync_on_startup: bool = True
 
     # App
     cors_origins: str = "*"

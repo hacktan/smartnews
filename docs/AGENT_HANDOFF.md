@@ -30,6 +30,15 @@
   - concurrency lock (`group: pipeline`)
   - scraping step can fail without stopping entire run (`continue-on-error: true`)
   - step summary output in GitHub Actions
+- Frontend resilience hardening (2026-04-04):
+  - `frontend/app/sources/page.tsx` now handles API failure + empty leaderboard state.
+  - `frontend/app/page.tsx` narratives section now guards against malformed payloads.
+  - `frontend/app/topic/[name]/page.tsx` now handles search API failure safely.
+  - `frontend/app/narratives/[arcId]/page.tsx` timeline render now guards missing article arrays.
+- API startup DB sync hardening (2026-04-04):
+  - `api/main.py` now syncs DB from GitHub Releases on startup by default.
+  - Falls back to existing local DB if sync fails and local file exists.
+  - New setting in `api/config.py`: `DB_SYNC_ON_STARTUP` (default `true`).
 
 ## 3) Pipeline Run Order (Do Not Change)
 
@@ -73,14 +82,24 @@ uv run python pipeline/04b_claim_extraction.py
   - API smoke
   - frontend smoke on live routes
 - `docs/PRODUCT_VALIDATIONS.md` is legacy/stale (contains old Databricks-era checks). Keep for reference only or archive/update.
+- Live API currently returns:
+  - `/api/briefing/daily` => `404` (no latest briefing row)
+  - `/api/narratives?limit=1` => `items: []`
+  - `/api/stories?limit=1` => `items: []`
+  This is the main reason for currently sparse/empty multi-source pages.
+- Recent workflow failure root cause (run `23968498060`): `OPENAI_API_KEY` missing during `04_ai_enrichment.py`.
+- Fix applied:
+  - `pipeline/04_ai_enrichment.py` now supports `AI_LLM_PROVIDER=local` (OpenAI-compatible endpoint).
+  - `.github/workflows/pipeline.yml` enrichment steps now run when either `AI_LLM_PROVIDER=local` or `OPENAI_API_KEY` exists.
+  - Added workflow warning that GitHub-hosted runners cannot reach local `localhost` endpoints.
 
 ## 6) First Tasks For Next Agent (Priority)
 
 1. Run fresh pipeline (or trigger workflow) and verify `pipeline/validate.py` passes.
-2. Inspect live homepage/story pages for blank-title or summary regressions.
-3. If regressions exist, patch serving queries in `pipeline/05_serving_projection.py` and rerun projection + validation.
-4. Update `docs/VALIDATIONS.md` with exact commands/results from this verification pass.
-5. Keep this file and `docs/LEARNINGS.md` updated as source of truth.
+2. Confirm `serve.daily_briefing`, `serve.story_arcs`, `serve.compiled_stories` receive non-empty rows.
+3. Re-run live API smoke checks and capture counts, not just status codes.
+4. Inspect live multi-source routes (`/briefing`, `/narratives`, `/stories`) for data-populated rendering.
+5. If data is still missing, patch generation steps in `pipeline/03b_story_matching.py`, `pipeline/04_ai_enrichment.py`, and `pipeline/05_serving_projection.py`.
 
 ## 7) Important File Map
 

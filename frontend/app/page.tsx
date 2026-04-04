@@ -67,7 +67,13 @@ export default async function HomePage() {
 
   try { clusters = await api.clusters(); } catch { clusters = []; }
   try { const bs = await api.blindSpots(8); blindSpots = bs.items; } catch { blindSpots = []; }
-  try { const nr = await api.narratives(6); narratives = nr.items.filter(a => (a.hype_trend ?? 0) > 0.05).slice(0, 4); } catch { narratives = []; }
+  try {
+    const nr = await api.narratives(6);
+    const items = Array.isArray(nr.items) ? nr.items : [];
+    narratives = items.filter((a) => (a.hype_trend ?? 0) > 0.05).slice(0, 4);
+  } catch {
+    narratives = [];
+  }
 
   return (
     <div className="flex flex-col gap-14">

@@ -1,5 +1,6 @@
 import { api } from "@/lib/api";
 import { ScoreBar } from "@/components/ScoreBadge";
+import Link from "next/link";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +10,21 @@ export const metadata: Metadata = {
 };
 
 export default async function SourcesLeaderboardPage() {
-  const { sources } = await api.sourcesLeaderboard();
+  let sources = [] as Awaited<ReturnType<typeof api.sourcesLeaderboard>>["sources"];
+
+  try {
+    const data = await api.sourcesLeaderboard();
+    sources = Array.isArray(data.sources) ? data.sources : [];
+  } catch {
+    return (
+      <div className="mx-auto max-w-3xl py-24 text-center">
+        <h1 className="text-2xl font-bold text-gray-900 mb-3">Source Leaderboard</h1>
+        <p className="text-gray-500 mb-2">Source rankings are not available right now.</p>
+        <p className="text-xs text-gray-400">Try again after the next pipeline refresh.</p>
+        <Link href="/" className="mt-6 inline-block text-sm text-blue-600 hover:underline">← Back to Home</Link>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-3xl flex flex-col gap-8">
@@ -22,7 +37,11 @@ export default async function SourcesLeaderboardPage() {
       </div>
 
       <div className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
-        {sources.map((source, index) => (
+        {sources.length === 0 ? (
+          <div className="px-5 py-10 text-center text-sm text-gray-400">
+            No source statistics available yet.
+          </div>
+        ) : sources.map((source, index) => (
           <div
             key={source.source_name}
             className="flex items-center gap-4 px-5 py-4 border-b border-gray-50 last:border-0 hover:bg-gray-50/60 transition-colors"

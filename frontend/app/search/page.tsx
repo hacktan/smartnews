@@ -44,7 +44,7 @@ export default async function SearchPage({ searchParams }: Props) {
         max_hype: max_hype ? parseFloat(max_hype) : undefined,
         min_importance: min_importance ? parseFloat(min_importance) : undefined,
       });
-    } catch (e) {
+    } catch {
       error = "Search failed. Please try again.";
     }
   }

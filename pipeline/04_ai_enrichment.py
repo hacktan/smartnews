@@ -26,8 +26,11 @@ from openai import OpenAI
 load_dotenv()
 
 DB_PATH = os.getenv("DB_PATH", str(Path(__file__).parent.parent / "smartnews.duckdb"))
+AI_LLM_PROVIDER = os.getenv("AI_LLM_PROVIDER", "openai").strip().lower()
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 OPENAI_EMBEDDING_MODEL = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+LOCAL_OPENAI_BASE_URL = os.getenv("LOCAL_OPENAI_BASE_URL", "http://127.0.0.1:11434/v1")
+LOCAL_OPENAI_API_KEY = os.getenv("LOCAL_OPENAI_API_KEY", "ollama")
 BATCH_LIMIT = int(os.getenv("ENRICHMENT_BATCH_LIMIT", "50"))
 EMBEDDING_BATCH_LIMIT = 100
 RATE_LIMIT_SLEEP = 0.3
@@ -66,6 +69,18 @@ Scoring rules:
 Return ONLY the JSON object. No markdown, no explanation."""
 
 
+def build_client() -> OpenAI:
+    if AI_LLM_PROVIDER == "local":
+        return OpenAI(base_url=LOCAL_OPENAI_BASE_URL, api_key=LOCAL_OPENAI_API_KEY)
+
+    if not os.getenv("OPENAI_API_KEY"):
+        raise ValueError(
+            "OPENAI_API_KEY must be set when AI_LLM_PROVIDER=openai."
+        )
+
+    return OpenAI()
+
+
 def compute_freshness(published_at) -> float:
     if published_at is None:
         return 0.1
@@ -96,16 +111,28 @@ def enrich_article(client: OpenAI, entry_id: str, title: str, summary: str,
     )
 
     try:
-        response = client.chat.completions.create(
-            model=OPENAI_MODEL,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user",   "content": user_content},
-            ],
-            temperature=0.1,
-            max_tokens=400,
-            response_format={"type": "json_object"},
-        )
+        try:
+            response = client.chat.completions.create(
+                model=OPENAI_MODEL,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user",   "content": user_content},
+                ],
+                temperature=0.1,
+                max_tokens=400,
+                response_format={"type": "json_object"},
+            )
+        except Exception:
+            # Some OpenAI-compatible local providers do not support response_format.
+            response = client.chat.completions.create(
+                model=OPENAI_MODEL,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user",   "content": user_content},
+                ],
+                temperature=0.1,
+                max_tokens=400,
+            )
         data = json.loads(response.choices[0].message.content)
         return {
             "entry_id":          entry_id,
@@ -137,12 +164,10 @@ def get_embedding(client: OpenAI, text: str) -> list:
 
 
 def main():
-    if not os.getenv("OPENAI_API_KEY"):
-        raise ValueError("OPENAI_API_KEY must be set.")
-
-    client = OpenAI()
+    client = build_client()
     con = duckdb.connect(DB_PATH)
 
+    print(f"Provider    : {AI_LLM_PROVIDER}")
     print(f"Model       : {OPENAI_MODEL}")
     print(f"Batch limit : {BATCH_LIMIT} articles per run")
 
@@ -339,16 +364,27 @@ Rules:
             user_content = f"Story covered by {len(selected)} sources:\n\n" + "\n\n".join(source_texts)
 
             try:
-                response = client.chat.completions.create(
-                    model=OPENAI_MODEL,
-                    messages=[
-                        {"role": "system", "content": COMPILATION_PROMPT},
-                        {"role": "user",   "content": user_content},
-                    ],
-                    temperature=0.0,
-                    max_tokens=1500,
-                    response_format={"type": "json_object"},
-                )
+                try:
+                    response = client.chat.completions.create(
+                        model=OPENAI_MODEL,
+                        messages=[
+                            {"role": "system", "content": COMPILATION_PROMPT},
+                            {"role": "user",   "content": user_content},
+                        ],
+                        temperature=0.0,
+                        max_tokens=1500,
+                        response_format={"type": "json_object"},
+                    )
+                except Exception:
+                    response = client.chat.completions.create(
+                        model=OPENAI_MODEL,
+                        messages=[
+                            {"role": "system", "content": COMPILATION_PROMPT},
+                            {"role": "user",   "content": user_content},
+                        ],
+                        temperature=0.0,
+                        max_tokens=1500,
+                    )
                 data = json.loads(response.choices[0].message.content)
                 body_text = str(data.get("compiled_body", "")).strip()
                 if len(body_text) < 600:
