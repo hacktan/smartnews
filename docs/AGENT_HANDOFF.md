@@ -175,3 +175,10 @@ Execution boundary (critical):
 - [x] Click-tracker fallback API URL updated to Render
 - [x] Live validation pass completed and documented (see `docs/VALIDATIONS.md` Iterations A-G)
 - [x] Automated smoke foundation added (`tests/` + quality/monitor workflows)
+
+## 11) Automation Snapshot (2026-04-04 late)
+
+- Quality Gate (push/PR) latest manual verification: https://github.com/hacktan/smartnews/actions/runs/23981916376 (pass)
+- Production Monitor latest manual verification: https://github.com/hacktan/smartnews/actions/runs/23981916386 (pass)
+- User Journey Monitor (Playwright) latest manual verification: https://github.com/hacktan/smartnews/actions/runs/23981916378 (pass)
+- API contract checks are now enforced in both Quality Gate and Production Monitor.

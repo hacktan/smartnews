@@ -428,3 +428,29 @@ Pipeline validation output (from run 23979669143):
 Conclusion:
 - Pipeline is now fully autonomous: cron triggers every 6 hours, enriches with local Ollama, uploads DB, validates.
 - No manual intervention required as long as runner machine is online.
+
+### Iteration K - Fast Quality Gate + Live Monitor Stabilization (2026-04-04)
+
+What was added:
+- `tests/contract_api.py`: API response contract checks for key endpoints.
+- `tests/smoke_api.py`: retry/backoff added for transient cold-start/network timeouts.
+- `.github/workflows/quality_gate.yml`:
+  - backend smoke now uses `api` project environment (`uv sync --project api`)
+  - API boots from downloaded DB snapshot with `DB_SYNC_ON_STARTUP=false`
+  - contract checks now run after smoke checks
+- `.github/workflows/monitor.yml`:
+  - runs live API contract checks in addition to smoke
+  - uploads `api-contract.log`
+- Browser-level live checks expanded:
+  - `frontend/e2e/user_journey.spec.ts` catches runtime JS errors, console errors, frontend 5xx responses
+  - desktop + mobile projects in `frontend/playwright.config.ts`
+  - `.github/workflows/user_journey_monitor.yml` runs Playwright journey on schedule
+
+Validation runs:
+- Quality Gate: https://github.com/hacktan/smartnews/actions/runs/23981916376 (pass)
+- Production Monitor: https://github.com/hacktan/smartnews/actions/runs/23981916386 (pass)
+- User Journey Monitor: https://github.com/hacktan/smartnews/actions/runs/23981916378 (pass)
+
+Operational outcome:
+- Fast gate is now deterministic and passing.
+- Live API + frontend + contract + browser-journey checks all pass in automation.
