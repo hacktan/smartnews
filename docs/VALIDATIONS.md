@@ -186,3 +186,31 @@ Follow-up hardening applied:
 Operational interpretation:
 - Local DB has narrative/claims data, while live API previously returned empty lists for multi-source endpoints.
 - Likely cause was stale DB file on running API instance; startup sync + redeploy should close this gap.
+
+### Iteration D — Workflow Recovery Verified (2026-04-04)
+
+Run executed:
+
+```bash
+gh run view 23968702286 --json status,conclusion,url
+```
+
+Result:
+- `status=completed`, `conclusion=success`
+- URL: https://github.com/hacktan/smartnews/actions/runs/23968702286
+
+Notable behavior:
+- Enrichment-related steps were skipped (expected when provider is `openai` and `OPENAI_API_KEY` is absent).
+- Core pipeline, serving projection, validation, and release upload all succeeded.
+
+Post-run live API smoke snapshot:
+- `200`: `/health`, `/api/home`, `/api/narratives?limit=3`, `/api/stories?limit=3`, `/api/sources/leaderboard`
+- `404`: `/api/briefing/daily`
+- counts:
+	- `narratives_count=1`
+	- `stories_count=0`
+
+Interpretation:
+- Pipeline execution path is now stable again.
+- Narrative data is now visible live.
+- Multi-source compiled stories still require enrichment-capable execution (OpenAI key or reachable local/self-hosted provider).

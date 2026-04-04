@@ -97,6 +97,10 @@ Execution boundary (critical):
   - `pipeline/04_ai_enrichment.py` now supports `AI_LLM_PROVIDER=local` (OpenAI-compatible endpoint).
   - `.github/workflows/pipeline.yml` enrichment steps now run when either `AI_LLM_PROVIDER=local` or `OPENAI_API_KEY` exists.
   - Added workflow warning that GitHub-hosted runners cannot reach local `localhost` endpoints.
+- Recovery status (latest):
+  - Workflow run `23968702286` completed successfully.
+  - Release upload succeeded after workflow `permissions: contents: write` fix.
+  - Live snapshot after run: `narratives_count=1`, `stories_count=0`, `briefing=404`.
 
 ## 6) First Tasks For Next Agent (Priority)
 
