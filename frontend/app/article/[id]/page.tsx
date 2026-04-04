@@ -163,8 +163,16 @@ export default async function ArticlePage({ params }: Props) {
         </section>
       )}
 
-      {/* Clean summary */}
-      {article.clean_summary && (
+      {/* Full text (preferred) */}
+      {article.full_text && article.full_text.trim().length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-3 text-lg font-bold text-gray-900">Full Article Text</h2>
+          <p className="leading-relaxed text-gray-700 whitespace-pre-line">{article.full_text}</p>
+        </section>
+      )}
+
+      {/* RSS summary fallback */}
+      {(!article.full_text || article.full_text.trim().length === 0) && article.clean_summary && (
         <section className="mb-8">
           <h2 className="mb-3 text-lg font-bold text-gray-900">Summary</h2>
           <p className="leading-relaxed text-gray-700 whitespace-pre-line">{article.clean_summary}</p>

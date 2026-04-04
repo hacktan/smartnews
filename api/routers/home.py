@@ -38,6 +38,8 @@ def _fetch_home_data() -> HomeResponse:
                link, CAST(publish_date AS STRING) AS publish_date, image_url
         FROM serve.article_cards
         WHERE importance_score IS NOT NULL
+          AND title IS NOT NULL
+          AND TRIM(title) != ''
         ORDER BY importance_score DESC
         LIMIT {limit}
         """
@@ -51,6 +53,8 @@ def _fetch_home_data() -> HomeResponse:
         FROM serve.article_cards
         WHERE hype_score IS NOT NULL AND hype_score < 0.3
           AND importance_score IS NOT NULL
+          AND title IS NOT NULL
+          AND TRIM(title) != ''
         ORDER BY importance_score DESC
         LIMIT {limit}
         """
@@ -71,6 +75,8 @@ def _fetch_home_data() -> HomeResponse:
                summary_snippet, hype_score, credibility_score, importance_score,
                link, CAST(publish_date AS STRING) AS publish_date, image_url
         FROM serve.article_cards
+        WHERE title IS NOT NULL
+          AND TRIM(title) != ''
         ORDER BY published_at DESC
         LIMIT {limit}
         """
@@ -90,6 +96,8 @@ def _fetch_home_data() -> HomeResponse:
           FROM serve.article_cards
           WHERE category IS NOT NULL
             AND importance_score IS NOT NULL
+            AND title IS NOT NULL
+            AND TRIM(title) != ''
             AND category IN (
               SELECT category FROM (
                 SELECT category, COUNT(*) AS cnt

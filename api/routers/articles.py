@@ -27,7 +27,7 @@ def get_article(entry_id: str):
         """
         SELECT
             entry_id, title, dehyped_title, source_name, published_at, category, link,
-            clean_summary, ai_summary, why_it_matters, hype_score, credibility_score,
+            clean_summary, full_text, has_full_text, ai_summary, why_it_matters, hype_score, credibility_score,
             importance_score, freshness_score, entities, subtopic, language,
             word_count, read_time_min AS estimated_read_time_min,
             related_entry_ids, image_url

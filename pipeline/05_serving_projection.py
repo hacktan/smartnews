@@ -34,6 +34,7 @@ load_dotenv()
 
 DB_PATH = os.getenv("DB_PATH", str(Path(__file__).parent.parent / "smartnews.duckdb"))
 LOOKBACK_DAYS = 30
+MIN_FULLTEXT_CHARS = 300
 
 
 def cosine_dense(v1: list, v2: list) -> float:
@@ -123,6 +124,8 @@ def main():
             ai_summary        VARCHAR,
             why_it_matters    VARCHAR,
             clean_summary     VARCHAR,
+            full_text         VARCHAR,
+            has_full_text     BOOLEAN,
             entities          VARCHAR,
             tags              VARCHAR,
             author            VARCHAR,
@@ -139,6 +142,22 @@ def main():
             updated_at        TIMESTAMPTZ
         )
     """)
+
+    # Schema evolution for existing DBs created before full_text columns were added.
+    article_detail_cols = {
+        r[0]
+        for r in con.execute(
+            """
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = 'serve' AND table_name = 'article_detail'
+            """
+        ).fetchall()
+    }
+    if "full_text" not in article_detail_cols:
+        con.execute("ALTER TABLE serve.article_detail ADD COLUMN full_text VARCHAR")
+    if "has_full_text" not in article_detail_cols:
+        con.execute("ALTER TABLE serve.article_detail ADD COLUMN has_full_text BOOLEAN")
 
     con.execute("""
         CREATE TABLE IF NOT EXISTS serve.story_clusters (
@@ -264,7 +283,9 @@ def main():
         FROM gold.news_articles
         WHERE publish_date >= current_date - INTERVAL '{LOOKBACK_DAYS} days'
           AND title IS NOT NULL
-          AND title != ''
+          AND TRIM(title) != ''
+          AND has_full_text = TRUE
+          AND COALESCE(LENGTH(full_text), 0) >= {MIN_FULLTEXT_CHARS}
     """).fetchall()
 
     gold_count = len(gold_rows)
@@ -282,7 +303,9 @@ def main():
         FROM gold.news_articles
         WHERE publish_date >= current_date - INTERVAL '{LOOKBACK_DAYS} days'
           AND title IS NOT NULL
-          AND title != ''
+          AND TRIM(title) != ''
+          AND has_full_text = TRUE
+          AND COALESCE(LENGTH(full_text), 0) >= {MIN_FULLTEXT_CHARS}
     """)
 
     updated_at = datetime.now(timezone.utc)
@@ -568,6 +591,8 @@ def main():
             COALESCE(ai_summary, '')           AS ai_summary,
             COALESCE(why_it_matters, '')       AS why_it_matters,
             COALESCE(clean_summary, '')        AS clean_summary,
+            COALESCE(full_text, '')            AS full_text,
+            COALESCE(has_full_text, FALSE)     AS has_full_text,
             COALESCE(entities, '[]')           AS entities,
             COALESCE(tags, '')                 AS tags,
             COALESCE(author, '')               AS author,
@@ -596,19 +621,21 @@ def main():
             r[9],   # ai_summary
             r[10],  # why_it_matters
             r[11],  # clean_summary
-            r[12],  # entities
-            r[13],  # tags
-            r[14],  # author
-            r[15],  # hype_score
-            r[16],  # credibility_score
-            r[17],  # importance_score
-            r[18],  # freshness_score
-            r[19],  # word_count
-            r[20],  # read_time_min
-            r[21],  # language
+            r[12],  # full_text
+            r[13],  # has_full_text
+            r[14],  # entities
+            r[15],  # tags
+            r[16],  # author
+            r[17],  # hype_score
+            r[18],  # credibility_score
+            r[19],  # importance_score
+            r[20],  # freshness_score
+            r[21],  # word_count
+            r[22],  # read_time_min
+            r[23],  # language
             related_map.get(r[0], ""),
             cluster_map.get(r[0], -1),
-            r[22],  # image_url
+            r[24],  # image_url
             updated_at,
         )
         for r in detail_rows
@@ -616,11 +643,11 @@ def main():
     con.executemany("""
         INSERT INTO serve.article_detail
             (entry_id, title, dehyped_title, source_name, published_at, publish_date,
-             category, subtopic, link, ai_summary, why_it_matters, clean_summary,
+             category, subtopic, link, ai_summary, why_it_matters, clean_summary, full_text, has_full_text,
              entities, tags, author, hype_score, credibility_score, importance_score,
              freshness_score, word_count, read_time_min, language,
              related_entry_ids, cluster_id, image_url, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, detail_insert)
     print(f"article_detail written: {len(detail_insert)} rows")
 

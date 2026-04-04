@@ -24,6 +24,8 @@ export interface ArticleDetail {
   category: string | null;
   link: string | null;
   clean_summary: string | null;
+  full_text: string | null;
+  has_full_text: boolean | null;
   ai_summary: string | null;
   why_it_matters: string | null;
   hype_score: number | null;

@@ -41,6 +41,8 @@ class ArticleDetail(BaseModel):
     category: Optional[str] = None
     link: Optional[str] = None
     clean_summary: Optional[str] = None
+    full_text: Optional[str] = None
+    has_full_text: Optional[bool] = None
     ai_summary: Optional[str] = None
     why_it_matters: Optional[str] = None
     hype_score: Optional[float] = None

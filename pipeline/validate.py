@@ -21,6 +21,7 @@ MIN_SILVER_ROWS = 5         # at least 5 cleaned articles
 MIN_GOLD_ROWS = 5           # at least 5 gold articles
 MIN_SERVE_CARDS = 5         # at least 5 article cards
 MIN_ENRICHED_FRACTION = 0.0 # enrichment is optional (might be 0 on first run)
+MIN_SERVE_FULLTEXT_FRACTION = 0.95  # serve.article_detail should be almost entirely full-text
 
 WARNINGS: list[str] = []
 ERRORS: list[str] = []
@@ -133,6 +134,15 @@ def main() -> int:
         cards = con.execute("SELECT COUNT(*) FROM serve.article_cards").fetchone()[0]
         check("serve.article_cards", cards, MIN_SERVE_CARDS)
 
+        empty_card_titles = con.execute(
+            "SELECT COUNT(*) FROM serve.article_cards WHERE title IS NULL OR TRIM(title) = ''"
+        ).fetchone()[0]
+        if empty_card_titles == 0:
+            print("  OK   serve.article_cards empty titles: 0")
+        else:
+            print(f"  FAIL  serve.article_cards empty titles: {empty_card_titles} (must be 0)")
+            ERRORS.append(f"serve.article_cards empty titles: {empty_card_titles} (must be 0)")
+
         feeds = con.execute("SELECT COUNT(*) FROM serve.category_feeds").fetchone()[0]
         check("serve.category_feeds", feeds, MIN_SERVE_CARDS)
 
@@ -141,6 +151,13 @@ def main() -> int:
 
         detail = con.execute("SELECT COUNT(*) FROM serve.article_detail").fetchone()[0]
         check("serve.article_detail", detail, MIN_SERVE_CARDS)
+
+        detail_fulltext = con.execute(
+            "SELECT COUNT(*) FROM serve.article_detail WHERE COALESCE(LENGTH(full_text), 0) >= 300"
+        ).fetchone()[0]
+        fulltext_frac = (detail_fulltext / detail) if detail > 0 else 0.0
+        check("serve.article_detail fulltext fraction", fulltext_frac, MIN_SERVE_FULLTEXT_FRACTION)
+        print(f"     -> {detail_fulltext}/{detail} detail rows have full text")
 
         clusters = con.execute("SELECT COUNT(*) FROM serve.story_clusters").fetchone()[0]
         check("serve.story_clusters", clusters, 1, critical=False)
