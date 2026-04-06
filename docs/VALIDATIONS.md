@@ -2,7 +2,15 @@
 
 This file is the operational checklist for validating SmartNews after code or pipeline changes.
 
-## Current Snapshot (2026-04-04)
+## Current Snapshot (2026-04-06)
+
+- Latest documented production state is reflected in `docs/AGENT_HANDOFF.md`.
+- API verified live and healthy (2026-04-06).
+- Open incident: **hacktan/smartnews#1** — User Journey Monitor (Playwright) failing since 2026-04-04. Root cause unknown; artifact inspection required.
+- Production Monitor (monitor.yml): passing — no open incident.
+- Pipeline cron: operational on self-hosted runner.
+
+## Snapshot (2026-04-04)
 
 - Latest documented production state is reflected in `docs/AGENT_HANDOFF.md`.
 - Narrative, Briefing, and Multi-source pages were validated as populated during Iterations E-G.
@@ -470,3 +478,26 @@ Latest validation runs:
 - Quality Gate: https://github.com/hacktan/smartnews/actions/runs/23982630526 (pass)
 - Production Monitor: https://github.com/hacktan/smartnews/actions/runs/23982630534 (pass)
 - User Journey Monitor: https://github.com/hacktan/smartnews/actions/runs/23982630542 (pass)
+
+### Iteration M — Incident Triage + Handoff Preparation (2026-04-06)
+
+Action:
+- Triaged open incident hacktan/smartnews#1 (User Journey Monitor failing).
+- Verified API and frontend health manually via direct endpoint calls.
+- Root cause of Playwright failure not yet resolved (artifact inspection pending).
+- Updated handoff doc, roadmap, and validations for OpenClaw agent handoff.
+
+Live API spot-checks (2026-04-06):
+- `/health` → `{"status":"ok"}` ✓
+- `/api/home` → `top_stories=9`, `trending_topics=10` ✓
+- `/api/stories?limit=1` → story present (`story_id: 7e88abaa8ebffaf1031d58f612b9995c`) ✓
+- `/api/narratives?limit=1` → arc present (`arc_id: cluster-3`, Space Exploration) ✓
+- `/api/clusters` → cluster list present ✓
+- Frontend homepage → loads, no Application error ✓
+- Frontend `/briefing` → loads correctly ✓
+- Frontend `/sources` → leaderboard renders ✓
+
+Status:
+- Production Monitor: no open incident → passing ✓
+- User Journey Monitor: FAILING → hacktan/smartnews#1 (3 failures since 2026-04-04) ✗
+- Pipeline cron: operational ✓

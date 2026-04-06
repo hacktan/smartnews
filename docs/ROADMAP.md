@@ -172,9 +172,47 @@ Minimum weekly routine:
 3. Check latest production monitor run and open incident issues.
 4. Update `docs/AGENT_HANDOFF.md` with current counts and risks.
 
+## T5 - Fix User Journey Monitor (OPEN INCIDENT)
+
+**Status**: Active incident — hacktan/smartnews#1 open since 2026-04-04
+
+Scope:
+- `frontend/e2e/user_journey.spec.ts`
+- `frontend/playwright.config.ts`
+- `.github/workflows/user_journey_monitor.yml`
+- Possibly one or more `frontend/app/**/page.tsx` files
+
+Preconditions:
+- Access to GitHub Actions artifacts: https://github.com/hacktan/smartnews/actions/workflows/user_journey_monitor.yml
+- Node.js + npm available locally
+
+Steps:
+1. Download `playwright-live-report` artifact from the latest failing run.
+2. Open the HTML report and identify the exact failing route and error type (`console.error`, `pageerror`, `requestfailed`, or navigation timeout).
+3. If the error is a **frontend bug** (console.error / pageerror): fix the relevant `frontend/app/**/page.tsx`.
+4. If the error is a **flaky network issue** (requestfailed / timeout from Render cold start): add appropriate filter or retry to the test.
+5. If the error is **mobile Chrome only**: consider removing the `mobile-chrome` project from `playwright.config.ts` (current value adds noise without clear benefit).
+6. Push fix, wait for next scheduled run or trigger manually.
+7. Close issue #1 once confirmed passing.
+
+Validation:
+```bash
+cd frontend
+npm ci
+npx playwright install --with-deps chromium
+FRONTEND_BASE_URL=https://frontend-chi-brown-98.vercel.app \
+API_BASE_URL=https://smartnews-api.onrender.com \
+npm run test:e2e
+```
+Pass criteria:
+- Test exits 0, no failures in report.
+- Next scheduled workflow run passes without creating a new comment on issue #1.
+
+Rollback:
+- If the fix makes the test too permissive (misses real bugs), revert and investigate root cause more carefully.
+
 ## 7) Short Backlog (After Stability)
 
-1. Add lightweight schema contract test (response key presence per endpoint).
-2. Add synthetic data seed for deterministic local smoke mode.
-3. Add trend-based alerts (coverage drop > X% week-over-week).
-4. Add frontend Playwright journey smoke for top 3 user paths.
+1. Add synthetic data seed for deterministic local smoke mode.
+2. Add trend-based alerts (coverage drop > X% week-over-week).
+3. Raise `SCRAPE_BATCH_LIMIT` from 100 → 200 once runner OOM risk is assessed.
