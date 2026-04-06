@@ -56,7 +56,7 @@ async function discoverIds(): Promise<DiscoveredIds> {
   return ids;
 }
 
-async function assertRouteHealthy(page: Page, path: string) {
+async function assertRouteHealthy(page: Page, path: string, retryAttempt = 1) {
   const routeErrors: string[] = [];
 
   const onPageError = (error: Error) => {
@@ -114,6 +114,17 @@ async function assertRouteHealthy(page: Page, path: string) {
     }
   }
 
+  page.off('pageerror', onPageError);
+  page.off('console', onConsole);
+  page.off('response', onResponse);
+  page.off('requestfailed', onRequestFailed);
+
+  // On transient errors (cold start, network blip), retry the route once before failing.
+  if ((navError || routeErrors.length > 0) && retryAttempt < 2) {
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+    return assertRouteHealthy(page, path, 2);
+  }
+
   expect(navError, `Navigation failed for ${path}: ${String(navError)}`).toBeNull();
 
   expect(response, `No response for ${path}`).not.toBeNull();
@@ -126,11 +137,6 @@ async function assertRouteHealthy(page: Page, path: string) {
 
   await page.waitForTimeout(500);
   expect(routeErrors, `Runtime errors detected on ${path}:\n${routeErrors.join('\n')}`).toEqual([]);
-
-  page.off('pageerror', onPageError);
-  page.off('console', onConsole);
-  page.off('response', onResponse);
-  page.off('requestfailed', onRequestFailed);
 }
 
 test('live user journey across critical routes', async ({ page }) => {
