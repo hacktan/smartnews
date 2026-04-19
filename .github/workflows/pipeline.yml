@@ -34,7 +34,7 @@ concurrency:
 jobs:
   pipeline:
     name: Run SmartNews Pipeline
-    runs-on: ${{ github.event.inputs.runner || 'self-hosted' }}
+    runs-on: ${{ github.event.inputs.runner || 'ubuntu-latest' }}
     timeout-minutes: 60
 
     defaults:
